@@ -579,3 +579,21 @@ A suggested build order, each step independently testable:
 11. **Theme, translations, README/CLAUDE.md, package.json bump.**
 
 ---
+
+## 17. Deferred hardening backlog (from Plan 1 review)
+
+The Plan 1 library is correct and tested for the happy path. These spec-stated behaviors were
+consciously deferred (tracked here, not silently dropped) — to be picked up during Plan 2 / live
+testing against the real Miniserver:
+
+- **Encrypt post-auth commands** over the enc channel (e.g. `enablebinstatusupdate`) to fully honor
+  the "encrypted over ws" decision. Plain works once authenticated; confirm against a live server.
+- **`killtoken` on clean `stop()`** (§7.3) so tokens don't accumulate on the Miniserver.
+- **`LoxAPPversion3` version check + structure disk caching** (§7.1/§7.6) to avoid re-downloading the
+  ~290 KB `LoxAPP3.json` on every connect.
+- **`hasEventSlots` warning** (§7.1) when no free live-update slots are available.
+- **Lifecycle test coverage**: reconnect/backoff path, keepalive timer, text-state → `controlState`
+  end-to-end, and the stored-token-401 → clear → re-acquire branch.
+
+Fixed immediately after the review (not deferred): the `npm run lint` scope, handshake response-code
+checks, `Requester` rejecting in-flight requests on disconnect, and a `room`/`cat` null-match guard.
