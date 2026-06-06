@@ -134,6 +134,7 @@ lib/loxone/
   protocol/commands.js         # command-string builders + salt rotation
   structure/Structure.js       # parse LoxAPP3.json, index, name/room resolution
   model/Control.js             # control + state-uuid↔name mapping
+  IconCache.js                 # fetch icon SVG over WS, recolor to currentColor, cache
 renderers/
   index.js                     # registry: control.type → Renderer
   BaseRenderer.js              # shared tile chrome (title, icon, color)
@@ -141,7 +142,7 @@ renderers/
   RoomControllerRenderer.js    # optional: IRoomControllerV2 temperature
   WallboxRenderer.js
   EnergyFlowRenderer.js
-  icons.js                     # Loxone SVG fetch + recolor, fallback map
+  icons.js                     # frontend: inject provided SVG; built-in fallback icon map
 translations/                  # en.json, de.json, nl.json, sv.json
 sample-data/                   # anonymized LoxAPP3.json + synthetic binary fixtures
 test/                          # unit tests + fixtures
@@ -164,7 +165,7 @@ INIT → API_KEY → PUBLIC_KEY → WS_OPEN → KEY_EXCHANGE → AUTH
 
 | State | Action |
 |---|---|
-| `API_KEY` | HTTP GET `http(s)://{host}/jdev/cfg/apiKey` → parse `snr`, `version`, `httpsStatus`, `local`, `hasEventSlots` |
+| `API_KEY` | HTTP GET `http(s)://{host}/jdev/cfg/apiKey` → parse `snr`, `version`, `httpsStatus`, `local`, `hasEventSlots`. `hasEventSlots` gates a visible "no free live-update slots" warning (the Miniserver serves live updates to a limited number of concurrent clients); `local`/`httpsStatus` are recorded for diagnostics |
 | `PUBLIC_KEY` | `jdev/sys/getPublicKey` → store RSA public key (normalize PEM `BEGIN/END` headers + line wrapping) |
 | `WS_OPEN` | open `ws://{host}/ws/rfc6455`, WebSocket sub-protocol **`remotecontrol`** |
 | `KEY_EXCHANGE` | generate AES-256 session key + IV; RSA-encrypt `"{keyHex}:{ivHex}"`; send `jdev/sys/keyexchange/{base64}` |
@@ -235,7 +236,9 @@ re-acquisition.
 Implemented with Node's built-in `crypto` (no `node-forge`):
 
 - **RSA:** `crypto.publicEncrypt({ key: publicKey, padding: RSA_PKCS1_PADDING }, payload)` → Base64.
-  (ECB / PKCS1, no line wrapping.) Payload for key exchange is `"{keyHex}:{ivHex}"`.
+  (ECB / PKCS1, no line wrapping.) Payload for key exchange is `"{keyHex}:{ivHex}"` — ~97 ASCII bytes
+  (64 + 1 + 32), well within the RSA-2048 PKCS#1 v1.5 limit (≤245 bytes); the hex form is deliberate
+  (the session key is *not* sent as raw bytes).
 - **AES:** `aes-256-cbc`, 32-byte key, 16-byte IV, **Zero-byte padding** (manual: pad plaintext with
   `0x00` to a 16-byte boundary and disable Node's PKCS#7 padding via `cipher.setAutoPadding(false)`).
   Output Base64, then `encodeURIComponent`.
@@ -309,7 +312,7 @@ commands) but is not invoked by v1 UI.
 | Direction | Notification | Payload |
 |---|---|---|
 | frontend → helper | `LOXONE_CONFIG` | the module `config` (sent once the DOM is ready) |
-| helper → frontend | `LOXONE_CONTROLS` | array of display controls: `{ id, type, name, room, category, iconUuid, initialStates }` |
+| helper → frontend | `LOXONE_CONTROLS` | array of display controls: `{ id, type, name, room, category, iconSvg, initialStates }` (the helper pre-fetches & recolors each icon node-side; `iconSvg` is a ready-to-inject SVG string, or `null` for the fallback) |
 | helper → frontend | `LOXONE_STATE` | batched array of `{ id, states }` (semantic), coalesced every `updateThrottleMs` |
 | helper → frontend | `LOXONE_STATUS` | `{ state, message }` (connection status) |
 | helper → frontend | `LOXONE_WARNINGS` | array of `{ entry, reason, candidates? }` for unresolved config entries |
@@ -386,11 +389,19 @@ Input contract (mapped from the EFM control's states in §15):
 Flow direction and arrowheads are derived from the signs of these values; the animation is paused
 when a flow is ~0.
 
+**`efmLayout: "compact"`** is an alternative, space-minimal rendering of the *same* input contract:
+one row per node (PV, grid, storage, house, extra consumers) with a directional arrow and value, no
+diagram. Both layouts share the data mapping; only the DOM output differs.
+
 ### 9.5 Icons
 
-`icons.js` fetches a control's icon by UUID over the WebSocket (`{iconUuid}.svg`), recolors it to
-`currentColor` so it inherits the tile's semantic color, and caches it per UUID. A small built-in
-icon map (and a neutral default) is the fallback when no SVG is available.
+Icon fetching lives on the **node side** (`lib/loxone/IconCache.js`), because the authenticated
+WebSocket lives there — the frontend never opens the Miniserver connection. The helper fetches each
+display control's icon by UUID over the WebSocket (`{iconUuid}.svg`), rewrites it to use
+`fill="currentColor"`, caches it per UUID, and delivers the ready SVG string inline in
+`LOXONE_CONTROLS` (`iconSvg`). The frontend simply injects that string into the tile, where it
+inherits the tile's semantic color via CSS. When no SVG is available, `iconSvg` is `null` and the
+frontend falls back to a small built-in icon map (`renderers/icons.js`) or a neutral default.
 
 ### 9.6 Visual theme (Hybrid)
 
@@ -454,7 +465,7 @@ Guiding principle: **one failure must never take down the whole module.**
 | Situation | Behaviour |
 |---|---|
 | Connection fails / WS close | Status tile "Connecting… / Offline"; auto-reconnect with exponential backoff (cap `reconnectMaxBackoffMs`) |
-| Auth `401` | Discard stored token; re-acquire **once**; if still `401`, show a configuration-error tile and stop hammering |
+| Auth `401` (initial `getjwt` **or** `authwithtoken` with a stored token the Miniserver forgot, e.g. across its own reboot) | Invalidate the `TokenStore` record; re-acquire a fresh JWT **once**; if still `401`, show a configuration-error tile and stop hammering |
 | Out-of-service / reboot (header type 5; close code 4007) | "Miniserver restarting…"; reconnect polling |
 | Token near expiry | Proactive `refreshjwt`; on failure, fall back to full re-auth |
 | Auth timeout (close code 4003 / response 420) | Treated as connection failure → backoff reconnect |
