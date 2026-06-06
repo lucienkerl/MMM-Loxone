@@ -151,6 +151,11 @@ Expected: FAIL — cannot find module `viewmodels`.
 		if (format === null || format === undefined || format === "") {
 			return value === null || value === undefined ? "" : String(value);
 		}
+		const numericMissing = value === null || value === undefined || value === "" || Number.isNaN(Number(value));
+		const probe = format.match(SPEC);
+		if (probe && (probe[2] === "f" || probe[2] === "d" || probe[2] === "i") && numericMissing) {
+			return "—"; // numeric token with no value -> whole string is the dash
+		}
 		return format
 			.replace(/%%/g, "\\u0001")
 			.replace(SPEC, (m, precision, conv) => {
@@ -167,7 +172,9 @@ Expected: FAIL — cannot find module `viewmodels`.
 				if (conv === "d" || conv === "i") {
 					return String(Math.round(num));
 				}
-				return num.toFixed(precision === undefined ? 6 : parseInt(precision, 10));
+				const p = precision === undefined ? 6 : parseInt(precision, 10);
+				const factor = Math.pow(10, p);
+				return (Math.round((num + Number.EPSILON * Math.abs(num)) * factor) / factor).toFixed(p);
 			})
 			.replace(/\\u0001/g, "%");
 	}
@@ -1184,7 +1191,12 @@ git rm scripts/q.js scripts/jquery.min.js shared/lxEnums.js Gruntfile.js .stylel
 rmdir scripts shared 2>/dev/null || true
 ```
 
-- [ ] **Step 2: Add runtime artifacts to `.gitignore`** (append):
+- [ ] **Step 2: Widen lint scope + ignore runtime artifacts**
+
+Change the `package.json` `"lint"` script to cover the new frontend/bridge code:
+`"lint": "eslint lib test renderers MMM-Loxone.js node_helper.js"`
+
+Append to `.gitignore`:
 
 ```
 .loxone-tokens.json
