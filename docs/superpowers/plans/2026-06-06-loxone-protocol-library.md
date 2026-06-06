@@ -1252,10 +1252,15 @@ const U = (p) => `${p}-0000-0000-0000000000000000`;
 function fixture() {
 	const ROOM_WZ = U("00aa0001");
 	const ROOM_TK = U("00aa0002");
+	const ROOM_HID = U("00aa0003");
 	const CAT_EN = U("00cc0001");
 	return {
 		lastModified: "2024-01-01 12:00:00",
-		rooms: { [ROOM_WZ]: { uuid: ROOM_WZ, name: "Wohnzimmer" }, [ROOM_TK]: { uuid: ROOM_TK, name: "Technik" } },
+		rooms: {
+			[ROOM_WZ]: { uuid: ROOM_WZ, name: "Wohnzimmer" },
+			[ROOM_TK]: { uuid: ROOM_TK, name: "Technik" },
+			[ROOM_HID]: { uuid: ROOM_HID, name: "Versteckt" }
+		},
 		cats: { [CAT_EN]: { uuid: CAT_EN, name: "Energie" } },
 		controls: {
 			[U("11111111")]: { uuidAction: U("11111111"), name: "Wallbox", type: "Wallbox2", room: ROOM_TK, cat: CAT_EN,
@@ -1263,7 +1268,8 @@ function fixture() {
 			[U("22222222")]: { uuidAction: U("22222222"), name: "Licht", type: "Switch", room: ROOM_WZ,
 				states: { active: U("bbbb1111") } },
 			[U("33333333")]: { uuidAction: U("33333333"), name: "Licht", type: "Switch", room: ROOM_TK,
-				states: { active: U("bbbb2222") } }
+				states: { active: U("bbbb2222") } },
+			[U("44444444")]: { uuidAction: U("44444444"), name: "Geheim", type: "", room: ROOM_HID, states: {} }
 		},
 		globalStates: { notifications: U("ffff0000") }
 	};
@@ -1310,6 +1316,12 @@ test("controlsInRoom returns top-level controls by room name or uuid", () => {
 	const s = new Structure(fixture());
 	assert.deepEqual(s.controlsInRoom("Technik").map((c) => c.name).sort(), ["Licht", "Wallbox"]);
 	assert.equal(s.controlsInRoom(U("00aa0001")).length, 1); // Wohnzimmer, by UUID key
+});
+
+test("excludes empty-type controls ('not visualized') from name resolution and room listings", () => {
+	const s = new Structure(fixture());
+	assert.throws(() => s.resolve("Geheim"), NotFoundError);
+	assert.equal(s.controlsInRoom("Versteckt").length, 0);
 });
 
 test("statesForUuid maps a state UUID back to its control + state name", () => {
@@ -1382,7 +1394,8 @@ class Structure {
 		control.uuid = uuid;
 		control._top = !isSub;
 		this.controls[uuid] = control;
-		if (!isSub) {
+		// Empty-type controls "should not be visualized" (Structure File doc) -> keep out of name index.
+		if (!isSub && control.type) {
 			const key = norm(control.name);
 			if (!this._byName.has(key)) {
 				this._byName.set(key, []);
@@ -1463,14 +1476,14 @@ class Structure {
 	}
 
 	controlsInRoom(roomEntry) {
-		// Accept a direct room key (UUID) or a room name.
+		// Accept a direct room key (UUID) or a room name; skip non-visualized (empty-type) controls.
 		const room = this.rooms[roomEntry] ? roomEntry : this._uuidByName(this.rooms, roomEntry);
-		return Object.values(this.controls).filter((c) => c._top && c.room === room);
+		return Object.values(this.controls).filter((c) => c._top && c.type && c.room === room);
 	}
 
 	controlsInCategory(catEntry) {
 		const cat = this.cats[catEntry] ? catEntry : this._uuidByName(this.cats, catEntry);
-		return Object.values(this.controls).filter((c) => c._top && c.cat === cat);
+		return Object.values(this.controls).filter((c) => c._top && c.type && c.cat === cat);
 	}
 
 	statesForUuid(stateUuid) {
@@ -1498,7 +1511,7 @@ module.exports = { Structure, NotFoundError, AmbiguousNameError, looksLikeUuid }
 - [ ] **Step 4: Run to verify pass**
 
 Run: `node --test test/structure.test.js`
-Expected: PASS (9 tests).
+Expected: PASS (10 tests).
 
 - [ ] **Step 5: Lint + commit**
 

@@ -1,7 +1,7 @@
 # MMM-Loxone — Ground-Up Rebuild Design
 
 **Date:** 2026-06-06
-**Status:** Approved design (pending spec review)
+**Status:** Approved — spec reviewed; control bindings confirmed from the Structure File doc v17.0
 **Author:** Lucien Kerl (with Claude)
 
 ---
@@ -13,8 +13,8 @@ Replace the existing `MMM-Loxone` module — which depends on the deprecated
 implementation that:
 
 1. Speaks the **current official Loxone Miniserver protocol** (token-based authentication,
-   RSA/AES command encryption, RFC6455 WebSocket, binary event tables), per the Loxone document
-   *"Communicating with the Miniserver"* v16.0 (2025-06-03).
+   RSA/AES command encryption, RFC6455 WebSocket, binary event tables), per the Loxone documents
+   *"Communicating with the Miniserver"* v16.0 (2025-06-03) and *"Structure File"* v17.0 (2026-03-31).
 2. Renders **generic Loxone controls** plus **rich graphical renderers** for the **Wallbox** and
    the **Energy Flow Monitor** (Energieflussmonitor).
 3. Is **read-only** in v1 (a command/write path is designed into the architecture but not exposed
@@ -75,6 +75,8 @@ The module replaces the current implementation **in place** in this repository, 
   WSS may be added later behind the same `Transport` interface.
 - A general third-party notification API for other MagicMirror modules (the old module's
   `LOXONE_STATE` / `allow3rdParty` broadcast). Can be reconsidered in a later milestone.
+- Statistics / history charts (the `statistic` / `statisticV2` data and `StatisticV2` graphs). v1
+  shows live state only.
 
 ---
 
@@ -288,6 +290,11 @@ in v1 (skipped after decoding). Type `5` toggles out-of-service; type `6` confir
   - unique match → resolved control;
   - multiple matches → `AmbiguousNameError` carrying the candidates (with room names);
   - no match → `NotFoundError`.
+- Controls with an **empty `type`** (per the doc, "should not be visualized") are excluded from name
+  resolution and from room/category listings.
+- A control's states arrive as either **value events** (numbers) or **text events** (strings — e.g.
+  the Wallbox `session` JSON, `TextState.textAndIcon`, `iconAndColor`); `namedStates` returns whatever
+  was last seen for each state UUID, regardless of kind.
 - Caches the structure file + `lastModified` to disk for version checks.
 
 ### 7.7 State model
@@ -348,29 +355,36 @@ times per second regardless of Miniserver event volume.
 
 ### 9.2 Generic renderers
 
-| Control type | Rendering |
+| Control type | State(s) / details (confirmed) → rendering |
 |---|---|
-| `InfoOnlyAnalog` | value formatted via `control.details.format` (a printf-style format) |
-| `InfoOnlyDigital` | on/off text + color (or icon) from `control.details` |
-| `TextState` | text + icon from the text event |
-| `Switch` / `Pushbutton` | label + on/off indicator (read-only) |
-| `Dimmer` / slider | percentage value + thin bar |
-| `IRoomControllerV2` (optional) | current room temperature (+ target) |
+| `InfoOnlyAnalog` | state `value`; `details.format` (printf) → formatted value |
+| `InfoOnlyDigital` | state `active` (0/1); `details.text.on/off`, `details.color.on/off`, optional `details.image.on/off` → on/off text in color |
+| `InfoOnlyText` | state `text` (+ optional `details.format`) → the text |
+| `TextState` | state `textAndIcon` (text); optional `iconAndColor` (JSON `{icon,color}`) → text |
+| `Switch` / `Pushbutton` | state `active` (+ `lockedOn`) → label + on/off indicator (read-only) |
+| `Dimmer` | states `position`, `min`, `max` → percentage + thin bar |
+| `IRoomControllerV2` (optional) | `details.format` + temperature state (e.g. `tempActual`) → current temp; exact key bound from the fixture |
 
 Number formatting reimplements the small printf subset Loxone uses (replacing the old `sprintf-js`
 dependency) — sufficient for `details.format` strings such as `"%.1f°C"`.
 
 ### 9.3 Wallbox renderer — input contract
 
-`WallboxRenderer.update(states)` consumes a normalized semantic object; the implementation maps the
-Wallbox control's actual state keys (confirmed from the fixture, §15) onto this contract:
+Control type **`Wallbox2`** (it embeds a **`Meter`**, so it also carries the Meter states).
+`WallboxRenderer.update(states)` consumes a normalized object mapped from these **confirmed** states
+(§15):
 
-- `power` — current charging power (kW) → headline value + progress bar (relative to `maxPower`)
-- `connected` — vehicle plugged in (bool)
-- `charging` — charging/active (bool or mode) → status word, colored when active
-- `sessionEnergy` — energy this session (kWh)
-- `totalEnergy` — lifetime energy (kWh, optional)
-- `maxPower` / `limit` — for the progress bar (optional)
+- `power` — current charging power (kW) ← Meter `actual` (fallback `session.power`) → headline + progress bar
+- `connected` — vehicle plugged in ← state `connected`
+- `active` — currently charging ← state `active` → status word, colored when active
+- `enabled` — charging allowed ← state `enabled`
+- `sessionEnergy` — energy this session (kWh) ← `session.energy`
+- `totalEnergy` — cumulative energy (kWh) ← Meter `total`
+- `limit` / `maxPower` — current limit (kW) ← state `limit`; max ← `details.max` (for the bar)
+
+Note: `session` is a **text state** carrying a JSON object (`{ connect, disconnect, start, energy,
+power, user, price }`) — the renderer `JSON.parse`s it. `connected`/`active`/`enabled`/`limit`/`actual`
+are numeric value states.
 
 ### 9.4 Energy Flow renderer — radial, input contract
 
@@ -378,16 +392,20 @@ Wallbox control's actual state keys (confirmed from the fixture, §15) onto this
 animated dashed flow lines whose direction encodes energy flow. Color semantics: production green,
 grid-import red / grid-export green, storage blue, consumers neutral/green.
 
-Input contract (mapped from the EFM control's states in §15):
+Input contract — mapped from the **`EnergyFlowMonitor`** control's **confirmed** top-level states (§15):
 
-- `production` — PV/generation (kW)
-- `grid` — signed: positive = import, negative = export (kW) — or `gridImport`/`gridExport`
-- `storage` — signed: positive = discharge, negative = charge (kW); optional `soc` (%)
-- `consumption` — house/total consumption (kW)
-- optional additional consumer nodes (e.g. wallbox) with `{ label, power }`
+- `production` (kW) ← state `Ppwr`
+- `grid` (kW, signed: **+ import / − export**) ← state `Gpwr`
+- `storage` (kW, signed: **+ discharge / − charge**) ← state `Spwr`
+- `consumption` (kW) ← **computed** as `Ppwr + Gpwr + Spwr` (energy balance: production + grid-import +
+  storage-discharge − exports − charging = house load)
+- `priceImport` / `priceExport` ← states `Pri` / `Pre`; `co2` ← state `CO2`
+- `soc` (battery %, optional) ← a co-located `EnergyManager2` `Ssoc` if present (the EFM has no
+  top-level SOC state)
+- formats ← `details.actualFormat` (e.g. `"%.3f kW"`), `details.totalFormat`
 
-Flow direction and arrowheads are derived from the signs of these values; the animation is paused
-when a flow is ~0.
+The sign conventions come straight from the EFM `nodeType` definitions (Grid/Storage/Production), so
+flow direction and arrowheads derive directly from the signs; the animation is paused when a flow is ~0.
 
 **`efmLayout: "compact"`** is an alternative, space-minimal rendering of the *same* input contract:
 one row per node (PV, grid, storage, house, extra consumers) with a directional arrow and value, no
@@ -522,22 +540,25 @@ copied into a `legacy/` directory by default (kept clean); this can be added on 
 
 ---
 
-## 15. Implementation-Resolved Inputs (from the fixture)
+## 15. Confirmed control bindings (from the Structure File doc v17.0)
 
-The design is complete; two concrete bindings are finalized during implementation against the
-anonymized `sample-data/LoxAPP3.json`, because the exact identifiers are installation/firmware
-specific. These are bindings, not open design questions:
+The special-renderer bindings are **confirmed** from the official *Structure File* doc — they are no
+longer open questions:
 
-1. **Control `type` identifiers** for the special renderers. Candidates to confirm in the fixture:
-   Wallbox → `Wallbox2` (and/or `Wallbox`); Energy Flow Monitor → the EFM control type as it appears
-   (e.g. `EFM` / energy-manager control). The renderer registry binds these strings to
-   `WallboxRenderer` / `EnergyFlowRenderer`; binding additional aliases is a one-line registry change.
-2. **State-key mapping** from each special control's actual `states` object onto the renderer input
-   contracts in §9.3 and §9.4 (e.g. which state key carries charging power, session energy, PV
-   production, grid, storage, consumption).
+| Renderer | Control `type` | Key states |
+|---|---|---|
+| `EnergyFlowRenderer` | `EnergyFlowMonitor` | `Ppwr`, `Gpwr`, `Spwr`, `Pri`, `Pre`, `CO2` (+ `details.actualFormat` / `totalFormat`) |
+| `WallboxRenderer` | `Wallbox2` | `connected`, `enabled`, `active`, `mode`, `limit`, `session` (JSON text), + Meter `actual` / `total`; `details.min` / `max` |
 
-If a binding cannot be determined from the fixture, that control falls back to the
-`GenericInfoRenderer` (its raw states still display) rather than failing.
+`Meter` states (also embedded in `Wallbox2`): `actual` (current power), `total` (cumulative energy),
+`totalNeg` (export, bidirectional), `storage` (battery type). Related types the registry may also map
+in later milestones: `EnergyManager2` (carries `Ppwr/Gpwr/Spwr/Ssoc`), `PowerUnit`, `WallboxManager`.
+The registry maps `type → renderer`, so adding aliases is a one-line change.
+
+The anonymized `sample-data/LoxAPP3.json` remains the **end-to-end test fixture** (structure parsing,
+name resolution, renderer snapshots) and confirms the concrete `states` UUIDs for the user's specific
+install. If a control's `type` has no registered renderer, it falls back to the `GenericInfoRenderer`
+(its raw states still display) rather than failing.
 
 ---
 
@@ -553,8 +574,8 @@ A suggested build order, each step independently testable:
 6. **LoxoneClient** — wire the state machine end to end; integrate live decode + state emission.
 7. **node_helper bridge** — socket protocol + state coalescing.
 8. **Frontend shell + registry + generic renderers** — render tiles, status, warnings.
-9. **Wallbox renderer** — bind type + states from the fixture.
-10. **Energy Flow renderer** — radial SVG + animation; bind states from the fixture.
+9. **Wallbox renderer** — `Wallbox2` + Meter states (§15); parse the `session` JSON text state.
+10. **Energy Flow renderer** — radial SVG + animation; `EnergyFlowMonitor` states `Ppwr/Gpwr/Spwr` (§15).
 11. **Theme, translations, README/CLAUDE.md, package.json bump.**
 
 ---
