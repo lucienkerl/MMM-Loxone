@@ -560,6 +560,22 @@ name resolution, renderer snapshots) and confirms the concrete `states` UUIDs fo
 install. If a control's `type` has no registered renderer, it falls back to the `GenericInfoRenderer`
 (its raw states still display) rather than failing.
 
+### Confirmed against the real install (`sample-data/LoxAPP3.json`, 278 controls)
+
+Real `type` strings and state keys verified directly (note: the energy-flow control's real `type` is
+**`EFM`**, not `EnergyFlowMonitor` — the latter is only the doc's section title):
+
+| Renderer | `type`(s) | Confirmed state keys / details |
+|---|---|---|
+| EnergyFlow (radial) | `EFM`, `EnergyManager2` | EFM: `Ppwr`,`Gpwr`,`Spwr`,`Pre`,`Pri`,`CO2`,`selfConsumption`,`actual0..n`; `details.nodes[]` (title/icon/nodeType). EnergyManager2: `Ppwr`,`Gpwr`,`Spwr`,`Ssoc` (battery %), `MinSoc`,`MaxSpwr` |
+| Wallbox | `Wallbox2` | `actual`,`total`,`connected`,`enabled`,`active`,`mode`,`limit`,`session`(JSON text),`pricePerkWh`; `details.min/max`,`actualFormat`,`totalFormat` |
+| Meter (×34) | `Meter` | `actual`,`total`,`totalDay/Week/Month/Year`,`totalNeg*`(bi),`storage`(storage type); `details.type`(uni/bi/storage),`actualFormat`,`totalFormat`,`storageFormat`,`storageMax` |
+| RoomController | `IRoomControllerV2` (×8) | `tempActual`,`tempTarget`,`comfortTemperature`,`currentMode`,`activeMode`; `details.format` |
+| Generic | `InfoOnlyAnalog`(×81) `value`+`details.format`; `InfoOnlyDigital`(×12) `active`+`details.text/color`; `TextState`(×11) `textAndIcon`/`iconAndColor`; `Switch`(×31)/`Pushbutton`(×13) `active`; `Slider`(×10) `value`+`details.min/max/step` |
+
+Every control may also carry a `jLocked` text status (ignored for display). Types without a renderer
+(e.g. `LightControllerV2`, `Jalousie`, `AudioZoneV2`) fall back to the generic renderer in v1.
+
 ---
 
 ## 16. Implementation Sequence (milestones)
