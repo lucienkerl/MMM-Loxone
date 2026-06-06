@@ -37,3 +37,41 @@ test("tokenHash is HMAC(token) keyed by hex key", () => {
 	const expected = crypto.createHmac("sha1", Buffer.from(keyHex, "hex")).update("the.jwt.token").digest("hex");
 	assert.equal(C.tokenHash("the.jwt.token", keyHex, "SHA1"), expected);
 });
+
+test("rsaEncryptBase64 produces a valid RSA-2048 PKCS#1 ciphertext", () => {
+	// Node 20+ forbids privateDecrypt with PKCS1 padding (CVE-2023-46809); the Miniserver
+	// path only encrypts. Verify the public-key encryption side instead of round-tripping.
+	const { publicKey } = crypto.generateKeyPairSync("rsa", { modulusLength: 2048 });
+	const pem = publicKey.export({ type: "spki", format: "pem" });
+	const a = C.rsaEncryptBase64(pem, "deadbeef:cafebabe");
+	const b = C.rsaEncryptBase64(pem, "deadbeef:cafebabe");
+	assert.equal(Buffer.from(a, "base64").length, 256); // 2048-bit modulus -> 256-byte block
+	assert.notEqual(a, b); // PKCS#1 v1.5 random padding -> ciphertext differs each time
+});
+
+test("aesEncryptBase64/aesDecryptString round-trip with zero padding (non-block-aligned)", () => {
+	const key = Buffer.alloc(32, 7);
+	const iv = Buffer.alloc(16, 9);
+	const plain = "salt/ab12/jdev/sps/enablebinstatusupdate"; // not a multiple of 16
+	const cipher = C.aesEncryptBase64(key, iv, plain);
+	assert.equal(C.aesDecryptString(key, iv, cipher), plain);
+});
+
+test("aesEncryptBase64 is deterministic for fixed key/iv", () => {
+	const key = Buffer.alloc(32, 1);
+	const iv = Buffer.alloc(16, 2);
+	assert.equal(C.aesEncryptBase64(key, iv, "hello"), C.aesEncryptBase64(key, iv, "hello"));
+});
+
+test("generateSessionKey yields 32-byte key + 16-byte iv as hex", () => {
+	const s = C.generateSessionKey();
+	assert.equal(s.keyHex.length, 64);
+	assert.equal(s.ivHex.length, 32);
+	assert.equal(s.keyBuf.length, 32);
+	assert.equal(s.ivBuf.length, 16);
+});
+
+test("randomSalt returns hex of requested byte length", () => {
+	assert.equal(C.randomSalt(2).length, 4);
+	assert.notEqual(C.randomSalt(2), C.randomSalt(2));
+});
