@@ -19,3 +19,21 @@ test("hmacHex matches known RFC vectors", () => {
 test("hexToBuf converts hex string to bytes", () => {
 	assert.deepEqual(C.hexToBuf("0a0b0c"), Buffer.from([10, 11, 12]));
 });
+
+test("passwordHash is uppercase HASH of '{pw}:{userSalt}'", () => {
+	const expected = crypto.createHash("sha1").update("secret:abcd1234").digest("hex").toUpperCase();
+	assert.equal(C.passwordHash("secret", "abcd1234", "SHA1"), expected);
+});
+
+test("credentialHash is HMAC('{user}:{pwHash}') keyed by hex key", () => {
+	const pwHash = C.passwordHash("secret", "abcd1234", "SHA256");
+	const keyHex = "00112233445566778899aabbccddeeff";
+	const expected = crypto.createHmac("sha256", Buffer.from(keyHex, "hex")).update(`mirror:${pwHash}`).digest("hex");
+	assert.equal(C.credentialHash("mirror", pwHash, keyHex, "SHA256"), expected);
+});
+
+test("tokenHash is HMAC(token) keyed by hex key", () => {
+	const keyHex = "0011223344556677";
+	const expected = crypto.createHmac("sha1", Buffer.from(keyHex, "hex")).update("the.jwt.token").digest("hex");
+	assert.equal(C.tokenHash("the.jwt.token", keyHex, "SHA1"), expected);
+});
