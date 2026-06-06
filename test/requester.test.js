@@ -36,3 +36,11 @@ test("commandEncrypted sends the cipher-wrapped command", async () => {
 	r.handleText("{\"LL\":{\"value\":{\"token\":\"t\"},\"Code\":\"200\"}}");
 	assert.deepEqual((await p).value, { token: "t" });
 });
+
+test("rejectAll rejects all pending requests and clears the queue", async () => {
+	const r = new Requester(() => {});
+	const p = r.command("x");
+	r.rejectAll(new Error("boom"));
+	await assert.rejects(() => p, /boom/);
+	r.handleText("{\"LL\":{\"value\":\"late\",\"Code\":\"200\"}}"); // no pending -> no throw
+});

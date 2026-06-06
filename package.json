@@ -11,7 +11,7 @@
   },
   "scripts": {
     "test": "node --test",
-    "lint": "eslint lib renderers MMM-Loxone.js node_helper.js"
+    "lint": "eslint lib test"
   },
   "devDependencies": {
     "eslint": "^8.57.0"
