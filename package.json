@@ -1,28 +1,22 @@
 {
   "name": "MMM-Loxone",
-  "version": "1.2.1",
+  "version": "2.0.0",
   "description": "MMM-Loxone connects to your Loxone Miniserver and lets it communicate to your MagicMirror².",
   "main": "MMM-Loxone.js",
   "author": "David Gölzhäuser",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/idoodler/MMM-Loxone.git"
+    "url": "https://github.com/lucienkerl/MMM-Loxone.git"
+  },
+  "scripts": {
+    "test": "node --test",
+    "lint": "eslint lib test renderers MMM-Loxone.js node_helper.js"
   },
   "devDependencies": {
-    "grunt": "^1.1.0",
-    "grunt-eslint": "latest",
-    "grunt-jsonlint": "^2.1.2",
-    "grunt-markdownlint": "^1.1.6",
-    "grunt-stylelint": "^0.15.0",
-    "grunt-yamllint": "latest",
-    "stylelint-config-standard": "^20.0.0",
-    "time-grunt": "latest"
+    "eslint": "^8.57.0"
   },
   "dependencies": {
-    "detect-rpi": "^1.4.0",
-    "lxcommunicator": "^1.1.1",
-    "sprintf-js": "^1.1.2",
-    "when": "^3.7.8"
+    "ws": "^8.18.0"
   }
 }

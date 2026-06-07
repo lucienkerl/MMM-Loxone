@@ -1,4 +1,16 @@
 {
-  "LOADING": "Lade Daten...",
-  "MISSING_OBSERVING_UUIDS": "'observingUuids' ist nicht in 'config.json' vorhanden!"
+	"LOADING": "Lade Daten…",
+	"CONNECTING": "Verbinde…",
+	"OFFLINE": "Offline",
+	"OOS": "Miniserver startet neu…",
+	"ERROR": "Fehler",
+	"MISSING_CONFIG": "host/user/password fehlen in config.js",
+	"NOT_FOUND": "Nicht gefunden",
+	"AMBIGUOUS": "Mehrdeutiger Name",
+	"ON": "Ein",
+	"OFF": "Aus",
+	"WB_CHARGING": "Lädt",
+	"WB_CONNECTED": "Verbunden",
+	"WB_IDLE": "Frei",
+	"SOC": "Ladestand"
 }

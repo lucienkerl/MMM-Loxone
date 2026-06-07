@@ -1,4 +1,16 @@
 {
-  "LOADING": "Loading...",
-  "MISSING_OBSERVING_UUIDS": "Missing 'observingUuids' in 'config.json'!"
+	"LOADING": "Loading…",
+	"CONNECTING": "Connecting…",
+	"OFFLINE": "Offline",
+	"OOS": "Miniserver restarting…",
+	"ERROR": "Error",
+	"MISSING_CONFIG": "Missing host/user/password in config.js",
+	"NOT_FOUND": "Not found",
+	"AMBIGUOUS": "Ambiguous name",
+	"ON": "On",
+	"OFF": "Off",
+	"WB_CHARGING": "Charging",
+	"WB_CONNECTED": "Connected",
+	"WB_IDLE": "Free",
+	"SOC": "SoC"
 }
