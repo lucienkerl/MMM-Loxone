@@ -42,12 +42,14 @@ module.exports = NodeHelper.create({
 			tokenStore: new TokenStore(path.join(dir, ".loxone-tokens.json"))
 		});
 
-		this.client.on("status", (s) => this.sendSocketNotification("LOXONE_STATUS", s));
+		this.client.on("status", (s) => { console.log("[MMM-Loxone] status:", s.state, s.message || ""); this.sendSocketNotification("LOXONE_STATUS", s); });
+		this.client.on("phase", (p) => console.log("[MMM-Loxone] phase:", p.phase, p.detail !== undefined ? JSON.stringify(p.detail) : ""));
 		this.client.on("oos", (oos) => this.sendSocketNotification("LOXONE_STATUS", { state: oos ? "oos" : "online" }));
-		this.client.on("warnings", (w) => this.sendSocketNotification("LOXONE_WARNINGS", w));
+		this.client.on("warnings", (w) => { console.warn("[MMM-Loxone] unresolved controls:", JSON.stringify(w)); this.sendSocketNotification("LOXONE_WARNINGS", w); });
 		this.client.on("controlState", (id, states) => this.coalescer.push(id, states));
 		this.client.on("structure", () => this.publishControls());
-		this.client.on("error", (e) => console.error("[MMM-Loxone]", e && e.message ? e.message : e));
+		this.client.on("close", (info) => console.warn("[MMM-Loxone] ws close: code=" + (info && info.code), info && info.reason ? "reason=" + info.reason : ""));
+		this.client.on("error", (e) => console.error("[MMM-Loxone] error:", e && e.stack ? e.stack : (e && e.message) || e));
 
 		this.client.connect();
 	},
