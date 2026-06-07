@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>MMM-Loxone renderer gallery</title>
+<link rel="stylesheet" href="../../MMM-Loxone.css">
+<style>
+	body { background: #000; color: #fff; margin: 0; padding: 26px 30px; font-family: "Roboto Condensed", "Segoe UI", Roboto, sans-serif; }
+	h1 { font-weight: 300; font-size: 20px; margin: 0 0 22px; }
+	.gallery { column-count: 3; column-gap: 30px; }
+	.gcard { break-inside: avoid; -webkit-column-break-inside: avoid; display: inline-block; width: 100%; margin: 0 0 24px; padding-bottom: 14px; border-bottom: 1px solid #181818; }
+	.glabel { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: #6aa9ff; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<h1>MMM-Loxone — Renderer-Galerie</h1>
+<div class="gallery" id="gallery"></div>
+
+<script src="../../renderers/viewmodels.js"></script>
+<script src="../../renderers/render.js"></script>
+<script>
+	var dict = {
+		ON: "Ein", OFF: "Aus", WB_CHARGING: "Lädt", WB_CONNECTED: "Verbunden", WB_IDLE: "Frei", SOC: "SoC",
+		WIN_OPEN: "offen", WIN_TILTED: "gekippt", WIN_CLOSED: "zu", GATE_OPEN: "Offen", GATE_CLOSED: "Geschlossen",
+		PRESENCE_ACTIVE: "Bewegung", PRESENCE_IDLE: "frei", EMERGENCY_ALARM: "ALARM", EMERGENCY_OK: "OK",
+		AUTO: "Auto", SHADE_SAFETY: "Sicherheit", FORECAST_TODAY: "heute", FORECAST_TOMORROW: "morgen",
+		ALARM_RINGING: "Klingelt", VENT_LEVEL: "Stufe", SAUNA_READY: "Bereit", SAUNA_HEATING: "Heizt",
+		INTERCOM_RINGING: "Klingelt", INTERCOM_LAST: "zuletzt", STATUS_FAULT: "Störung", STATUS_OK: "OK"
+	};
+	var ctx = { translate: function (k) { return dict[k] || k; }, showRoom: true };
+
+	var entries = [
+		{ label: "EFM / EnergyManager2", meta: { type: "EFM", name: "Energieflussmonitor", room: "Technik", details: { actualFormat: "%.1f kW" } }, states: { Ppwr: 6.2, Gpwr: -1.1, Spwr: -2.0, Ssoc: 78 } },
+		{ label: "Wallbox2", meta: { type: "Wallbox2", name: "Wallbox", room: "Garage", details: { actualFormat: "%.1f kW", totalFormat: "%.1f kWh", max: 11 } }, states: { actual: 7.7, total: 1234.5, connected: 1, enabled: 1, active: 1, limit: 11, session: "{\"power\":7.7,\"energy\":18.4}" } },
+		{ label: "Meter", meta: { type: "Meter", name: "PV", room: "Technik", details: { type: "unidirectional", actualFormat: "%.2f kW", totalFormat: "%.0f kWh" } }, states: { actual: 6.21, total: 12840 } },
+		{ label: "Meter (Speicher)", meta: { type: "Meter", name: "Speicher", room: "Technik", details: { type: "storage", actualFormat: "%.2f kW", storageFormat: "%.0f%%" } }, states: { actual: -2.0, storage: 78 } },
+		{ label: "IRoomControllerV2", meta: { type: "IRoomControllerV2", name: "Wohnzimmer", room: "Wohnen", details: { format: "%.1f°" } }, states: { tempActual: 21.4, tempTarget: 22 } },
+		{ label: "InfoOnlyAnalog", meta: { type: "InfoOnlyAnalog", name: "Außentemperatur", room: "Garten", details: { format: "%.1f° C" } }, states: { value: 12.4 } },
+		{ label: "InfoOnlyDigital", meta: { type: "InfoOnlyDigital", name: "Garagentor", room: "Garage", details: { text: { on: "Offen", off: "Geschlossen" }, color: { on: "#ff6b6b", off: "#7bd06a" } } }, states: { active: 0 } },
+		{ label: "InfoOnlyText", meta: { type: "InfoOnlyText", name: "Anlagenstatus", room: "Technik", details: {} }, states: { text: "Alles in Ordnung" } },
+		{ label: "TextState", meta: { type: "TextState", name: "CO₂ Schlafzimmer", room: "Schlafen" }, states: { textAndIcon: "612 ppm", iconAndColor: "{\"color\":\"#7bd06a\"}" } },
+		{ label: "Switch / Pushbutton", meta: { type: "Switch", name: "Terrasse", room: "Garten" }, states: { active: 1 } },
+		{ label: "Slider", meta: { type: "Slider", name: "Lüftung", room: "Bad", details: { format: "%.0f %%", min: 0, max: 100 } }, states: { value: 60 } },
+		{ label: "WindowMonitor", meta: { type: "WindowMonitor", name: "Fenster & Türen", room: "Haus" }, states: { numOpen: 1, numTilted: 1, numClosed: 12, numOffline: 0 } },
+		{ label: "Gate", meta: { type: "Gate", name: "Hoftor", room: "Hof" }, states: { position: 0, active: 0 } },
+		{ label: "PresenceDetector", meta: { type: "PresenceDetector", name: "Bewegung Flur", room: "Flur" }, states: { active: 1 } },
+		{ label: "AalEmergency", meta: { type: "AalEmergency", name: "Notruf", room: "Pflege" }, states: { status: 0 } },
+		{ label: "Jalousie", meta: { type: "Jalousie", name: "Jalousie Süd", room: "Wohnen" }, states: { position: 0.6, autoActive: 1 } },
+		{ label: "CentralJalousie", meta: { type: "CentralJalousie", name: "Beschattung", room: "Zentral" }, states: { safetyActive: 0 } },
+		{ label: "LightControllerV2", meta: { type: "LightControllerV2", name: "Licht Wohnen", room: "Wohnen" }, states: { activeMoods: "[3]", moodList: "[{\"id\":778,\"name\":\"Aus\"},{\"id\":3,\"name\":\"Gemütlich\"}]" } },
+		{ label: "PvProductionForecast", meta: { type: "PvProductionForecast", name: "PV-Vorhersage", room: "Zentral" }, states: { today: 38.2, tomorrow: 41.7 } },
+		{ label: "SpotPriceOptimizer", meta: { type: "SpotPriceOptimizer", name: "Strompreis", room: "Zentral", details: { format: "%.3f €/kWh" } }, states: { current: 0.124, low: 0.15, high: 0.35, veryHigh: 0.45 } },
+		{ label: "AlarmClock", meta: { type: "AlarmClock", name: "Wecker", room: "Schlafen" }, states: { isEnabled: 1, isAlarmActive: 0, nextEntryTime: 487053000 } },
+		{ label: "Heatmixer", meta: { type: "Heatmixer", name: "Heizungsmischer", room: "Technik" }, states: { tempActual: 38.4, tempTarget: 40 } },
+		{ label: "Ventilation", meta: { type: "Ventilation", name: "Lüftung", room: "Zentral" }, states: { speed: 2, humidityIndoor: 45 } },
+		{ label: "Sauna", meta: { type: "Sauna", name: "Sauna", room: "Wellness" }, states: { tempActual: 82, tempTarget: 90, active: 1, ready: 0 } },
+		{ label: "SteakThermo", meta: { type: "SteakThermo", name: "Grill", room: "Küche", details: { format: "%.1f°" } }, states: { temperatureGreen: 56.3, targetGreen: 60, isActive: 1 } },
+		{ label: "Intercom", meta: { type: "Intercom", name: "Türklingel", room: "Eingang" }, states: { bell: 0, lastBellTimestamp: 487050000 } },
+		{ label: "(unbekannt → Fallback)", meta: { type: "FooBarUnknown", name: "Unbekannt", room: "—" }, states: { value: 42 } }
+	];
+
+	var reg = self.LoxRender.buildRegistry();
+	var gal = document.getElementById("gallery");
+	entries.forEach(function (e) {
+		var card = document.createElement("div");
+		card.className = "gcard";
+		var label = document.createElement("div");
+		label.className = "glabel";
+		label.textContent = e.label;
+		card.appendChild(label);
+		var wrap = document.createElement("div");
+		wrap.className = "mmm-loxone";
+		var r = reg.resolve(e.meta.type) || self.LoxRender.genericFallbackRenderer();
+		wrap.appendChild(r.render(e.meta, e.states, ctx));
+		card.appendChild(wrap);
+		gal.appendChild(card);
+	});
+</script>
+</body>
+</html>

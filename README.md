@@ -12,6 +12,12 @@ The **Energy-Flow Monitor** renders as a radial diagram — house in the centre,
 
 > These are the actual renderers with sample data (Hybrid dark theme); the flow arrows animate in the live module. To preview locally **without a Miniserver**, serve the repo root with any static server (e.g. `python3 -m http.server`) and open `docs/preview/index.html`.
 
+### Renderer gallery
+
+Every supported control type, rendered with sample data (open `docs/preview/gallery.html` to see it live):
+
+![Gallery of every MMM-Loxone renderer with sample data](docs/screenshots/gallery.png)
+
 ## Features
 
 - Token-based authentication (no permanent credential storage; tokens refreshed automatically)
