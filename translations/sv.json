@@ -33,5 +33,10 @@
 	"INTERCOM_RINGING": "Ringer",
 	"INTERCOM_LAST": "senast",
 	"STATUS_FAULT": "fel",
-	"STATUS_OK": "OK"
+	"STATUS_OK": "OK",
+	"AUDIO_PLAYING": "Spelar",
+	"AUDIO_PAUSED": "Pausad",
+	"AUDIO_STOPPED": "Stoppad",
+	"AUDIO_OFFLINE": "Offline",
+	"VOLUME": "Vol"
 }

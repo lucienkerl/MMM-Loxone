@@ -167,6 +167,7 @@ If a name is ambiguous (the same name in several rooms) or not found, the module
 | `SteakThermo` | Cooking-probe temperature (actual → target) |
 | `Intercom` | Doorbell — ringing / last ring time |
 | `StatusMonitor` | Fault count / OK |
+| `AudioZoneV2` | Music-Server zone — play status (playing/paused/stopped/offline) + volume bar |
 | *(unknown)* | First available state value as text |
 
 ## License

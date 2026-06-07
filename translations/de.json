@@ -33,5 +33,10 @@
 	"INTERCOM_RINGING": "Klingelt",
 	"INTERCOM_LAST": "zuletzt",
 	"STATUS_FAULT": "Störung",
-	"STATUS_OK": "OK"
+	"STATUS_OK": "OK",
+	"AUDIO_PLAYING": "Spielt",
+	"AUDIO_PAUSED": "Pausiert",
+	"AUDIO_STOPPED": "Gestoppt",
+	"AUDIO_OFFLINE": "Offline",
+	"VOLUME": "Lautst."
 }

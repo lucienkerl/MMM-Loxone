@@ -283,12 +283,38 @@
 		return { defective, alert: defective > 0 };
 	}
 
+	// AudioZoneV2 (Music Server zone). playState: -1 unknown, 0 stopped, 1 paused,
+	// 2 playing. serverState >= 2 means online. Track text is not on the control
+	// (it lives in the Audio Server protocol), so we show status + volume.
+	function audioVM(states) {
+		const play = num(states.playState);
+		const vol = num(states.volume);
+		const maxVol = (states.maxVolume === null || states.maxVolume === undefined) ? 100 : num(states.maxVolume);
+		const server = (states.serverState === null || states.serverState === undefined) ? null : num(states.serverState);
+		const online = server === null ? true : server >= 2;
+		let status = "stopped";
+		if (!online) {
+			status = "offline";
+		} else if (play >= 2) {
+			status = "playing";
+		} else if (play === 1) {
+			status = "paused";
+		}
+		return {
+			status,
+			playing: status === "playing",
+			offline: status === "offline",
+			volume: vol,
+			volumePct: maxVol > 0 ? Math.max(0, Math.min(100, Math.round((vol / maxVol) * 100))) : 0
+		};
+	}
+
 	const api = {
 		formatLox, clampPct, infoAnalogVM, infoDigitalVM, infoTextVM, textStateVM,
 		switchVM, sliderVM, meterVM, roomControllerVM, wallboxVM, energyFlowVM,
 		windowMonitorVM, gateVM, presenceVM, aalEmergencyVM, jalousieVM, lightControllerVM,
 		centralJalousieVM, pvForecastVM, spotPriceVM, alarmClockVM, heatmixerVM, ventilationVM,
-		saunaVM, steakThermoVM, intercomVM, statusMonitorVM
+		saunaVM, steakThermoVM, intercomVM, statusMonitorVM, audioVM
 	};
 
 	if (typeof module === "object" && module.exports) {

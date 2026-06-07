@@ -22,7 +22,8 @@
 		PRESENCE_ACTIVE: "Bewegung", PRESENCE_IDLE: "frei", EMERGENCY_ALARM: "ALARM", EMERGENCY_OK: "OK",
 		AUTO: "Auto", SHADE_SAFETY: "Sicherheit", FORECAST_TODAY: "heute", FORECAST_TOMORROW: "morgen",
 		ALARM_RINGING: "Klingelt", VENT_LEVEL: "Stufe", SAUNA_READY: "Bereit", SAUNA_HEATING: "Heizt",
-		INTERCOM_RINGING: "Klingelt", INTERCOM_LAST: "zuletzt", STATUS_FAULT: "Störung", STATUS_OK: "OK"
+		INTERCOM_RINGING: "Klingelt", INTERCOM_LAST: "zuletzt", STATUS_FAULT: "Störung", STATUS_OK: "OK",
+		AUDIO_PLAYING: "Spielt", AUDIO_PAUSED: "Pausiert", AUDIO_STOPPED: "Gestoppt", AUDIO_OFFLINE: "Offline", VOLUME: "Lautst."
 	};
 	var ctx = { translate: function (k) { return dict[k] || k; }, showRoom: true };
 
@@ -51,7 +52,8 @@
 		{ meta: { id: "jal", type: "Jalousie", name: "Jalousie Süd", room: "Wohnen" }, states: { position: 0.6, autoActive: 1 } },
 		{ meta: { id: "light", type: "LightControllerV2", name: "Licht Wohnen", room: "Wohnen" }, states: { activeMoods: "[3]", moodList: "[{\"id\":778,\"name\":\"Aus\"},{\"id\":3,\"name\":\"Gemütlich\"}]" } },
 		{ meta: { id: "spot", type: "SpotPriceOptimizer", name: "Strompreis", room: "Zentral", details: { format: "%.3f €/kWh" } }, states: { current: 0.124, low: 0.15, high: 0.35, veryHigh: 0.45 } },
-		{ meta: { id: "fc", type: "PvProductionForecast", name: "PV-Vorhersage", room: "Zentral" }, states: { today: 38.2, tomorrow: 41.7 } }
+		{ meta: { id: "fc", type: "PvProductionForecast", name: "PV-Vorhersage", room: "Zentral" }, states: { today: 38.2, tomorrow: 41.7 } },
+		{ meta: { id: "audio", type: "AudioZoneV2", name: "Musik Bad", room: "Bad" }, states: { playState: 2, volume: 35, maxVolume: 80, serverState: 2, power: 1 } }
 	];
 
 	var reg = self.LoxRender.buildRegistry();

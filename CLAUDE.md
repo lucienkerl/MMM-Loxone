@@ -82,7 +82,7 @@ Both files are IIFEs that export to `module.exports` under Node (for unit tests)
 
 Tests live in `test/`. Run with `npm test` (requires Node 20+).
 
-Current suite (107 tests total across Plans 1 + 2), one `test/<name>.test.js` per unit:
+Current suite (110 tests total across Plans 1 + 2), one `test/<name>.test.js` per unit:
 
 - **Protocol library:** `crypto`, `uuid`, `messageHeader`, `frameAssembler`, `eventParser`, `commands`,
   `response`, `tokenStore`, `authenticator`, `structure`, `publicKey`, `apiKey`, `http`, `backoff`,

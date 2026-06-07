@@ -25,7 +25,8 @@
 		PRESENCE_ACTIVE: "Bewegung", PRESENCE_IDLE: "frei", EMERGENCY_ALARM: "ALARM", EMERGENCY_OK: "OK",
 		AUTO: "Auto", SHADE_SAFETY: "Sicherheit", FORECAST_TODAY: "heute", FORECAST_TOMORROW: "morgen",
 		ALARM_RINGING: "Klingelt", VENT_LEVEL: "Stufe", SAUNA_READY: "Bereit", SAUNA_HEATING: "Heizt",
-		INTERCOM_RINGING: "Klingelt", INTERCOM_LAST: "zuletzt", STATUS_FAULT: "Störung", STATUS_OK: "OK"
+		INTERCOM_RINGING: "Klingelt", INTERCOM_LAST: "zuletzt", STATUS_FAULT: "Störung", STATUS_OK: "OK",
+		AUDIO_PLAYING: "Spielt", AUDIO_PAUSED: "Pausiert", AUDIO_STOPPED: "Gestoppt", AUDIO_OFFLINE: "Offline", VOLUME: "Lautst."
 	};
 	var ctx = { translate: function (k) { return dict[k] || k; }, showRoom: true };
 
@@ -56,6 +57,7 @@
 		{ label: "Sauna", meta: { type: "Sauna", name: "Sauna", room: "Wellness" }, states: { tempActual: 82, tempTarget: 90, active: 1, ready: 0 } },
 		{ label: "SteakThermo", meta: { type: "SteakThermo", name: "Grill", room: "Küche", details: { format: "%.1f°" } }, states: { temperatureGreen: 56.3, targetGreen: 60, isActive: 1 } },
 		{ label: "Intercom", meta: { type: "Intercom", name: "Türklingel", room: "Eingang" }, states: { bell: 0, lastBellTimestamp: 487050000 } },
+		{ label: "AudioZoneV2", meta: { type: "AudioZoneV2", name: "Multiroom Bad", room: "Bad" }, states: { playState: 2, volume: 35, maxVolume: 80, serverState: 2, power: 1 } },
 		{ label: "(unbekannt → Fallback)", meta: { type: "FooBarUnknown", name: "Unbekannt", room: "—" }, states: { value: 42 } }
 	];
 

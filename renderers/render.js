@@ -34,9 +34,10 @@
 		bolt: [["path", { d: "M9.5 2 L4.5 9 H7.5 L6.5 14 L11.5 7 H8.5 Z" }]],
 		car: [["path", { d: "M2.5 10.5 L4 7.6 L11 7.6 L13.5 10.5" }], ["line", { x1: 2.4, y1: 10.5, x2: 13.6, y2: 10.5 }], ["circle", { cx: 5, cy: 10.9, r: 1.1 }], ["circle", { cx: 11, cy: 10.9, r: 1.1 }]],
 		gauge: [["path", { d: "M3 11 A5 5 0 0 1 13 11" }], ["line", { x1: 8, y1: 11, x2: 10.6, y2: 7.6 }], ["circle", { cx: 8, cy: 11, r: 0.8 }]],
-		thermo: [["line", { x1: 8, y1: 3.6, x2: 8, y2: 9.4 }], ["circle", { cx: 8, cy: 11.3, r: 2.1 }], ["line", { x1: 9, y1: 5.6, x2: 10, y2: 5.6 }], ["line", { x1: 9, y1: 7.6, x2: 10, y2: 7.6 }]]
+		thermo: [["line", { x1: 8, y1: 3.6, x2: 8, y2: 9.4 }], ["circle", { cx: 8, cy: 11.3, r: 2.1 }], ["line", { x1: 9, y1: 5.6, x2: 10, y2: 5.6 }], ["line", { x1: 9, y1: 7.6, x2: 10, y2: 7.6 }]],
+		note: [["circle", { cx: 5, cy: 12, r: 1.7 }], ["circle", { cx: 11.5, cy: 10.5, r: 1.7 }], ["line", { x1: 6.7, y1: 12, x2: 6.7, y2: 4 }], ["line", { x1: 13.2, y1: 10.5, x2: 13.2, y2: 2.8 }], ["line", { x1: 6.7, y1: 4, x2: 13.2, y2: 2.8 }]]
 	};
-	const BUILTIN = { Wallbox2: "car", EFM: "bolt", EnergyManager2: "bolt", Meter: "gauge", IRoomControllerV2: "thermo", PowerUnit: "battery" };
+	const BUILTIN = { Wallbox2: "car", EFM: "bolt", EnergyManager2: "bolt", Meter: "gauge", IRoomControllerV2: "thermo", PowerUnit: "battery", AudioZoneV2: "note" };
 
 	function el(tag, cls, text) {
 		const e = document.createElement(tag);
@@ -312,6 +313,16 @@
 	const intercomBody = (vm, ctx) => el("div", "lox-value" + (vm.ringing ? " lox-level-warn" : ""),
 		vm.ringing ? tr(ctx, "INTERCOM_RINGING", "Ringing") : (vm.lastTime ? tr(ctx, "INTERCOM_LAST", "last") + " " + vm.lastTime : "—"));
 	const statusMonBody = (vm, ctx) => lvl(vm.alert ? "alert" : "ok", vm.alert ? vm.defective + " " + tr(ctx, "STATUS_FAULT", "fault") : tr(ctx, "STATUS_OK", "OK"));
+	const audioBody = (vm, ctx) => {
+		const w = el("div", "lox-audio");
+		const status = el("div", "lox-value lox-state", tr(ctx, "AUDIO_" + vm.status.toUpperCase(), vm.status));
+		status.classList.toggle("is-on", vm.playing);
+		if (vm.offline) { status.classList.add("lox-muted"); }
+		w.appendChild(status);
+		w.appendChild(bar(vm.volumePct));
+		w.appendChild(el("div", "lox-sub", tr(ctx, "VOLUME", "Vol") + " " + vm.volume));
+		return w;
+	};
 
 	function buildRegistry() {
 		const reg = createRegistry();
@@ -341,6 +352,7 @@
 		reg.register("Sauna", makeRenderer((st, d) => VM.saunaVM(st, d), saunaBody));
 		reg.register("Intercom", makeRenderer((st) => VM.intercomVM(st), intercomBody));
 		reg.register("StatusMonitor", makeRenderer((st) => VM.statusMonitorVM(st), statusMonBody));
+		reg.register("AudioZoneV2", makeRenderer((st) => VM.audioVM(st), audioBody));
 		return reg;
 	}
 

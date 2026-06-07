@@ -33,5 +33,10 @@
 	"INTERCOM_RINGING": "Gaat af",
 	"INTERCOM_LAST": "laatst",
 	"STATUS_FAULT": "storing",
-	"STATUS_OK": "OK"
+	"STATUS_OK": "OK",
+	"AUDIO_PLAYING": "Speelt",
+	"AUDIO_PAUSED": "Gepauzeerd",
+	"AUDIO_STOPPED": "Gestopt",
+	"AUDIO_OFFLINE": "Offline",
+	"VOLUME": "Vol"
 }

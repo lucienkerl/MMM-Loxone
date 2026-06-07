@@ -177,3 +177,23 @@ test("statusMonitorVM defective alert", () => {
 	assert.deepEqual(vm.statusMonitorVM({ numDef: 0 }), { defective: 0, alert: false });
 	assert.deepEqual(vm.statusMonitorVM({ numDef: 2 }), { defective: 2, alert: true });
 });
+
+test("audioVM play states map to status", () => {
+	assert.equal(vm.audioVM({ playState: 2, volume: 30, serverState: 2 }).status, "playing");
+	assert.equal(vm.audioVM({ playState: 1, volume: 30, serverState: 2 }).status, "paused");
+	assert.equal(vm.audioVM({ playState: 0, volume: 30, serverState: 2 }).status, "stopped");
+	assert.equal(vm.audioVM({ playState: -1, volume: 30, serverState: 2 }).status, "stopped");
+});
+
+test("audioVM offline serverState overrides play state", () => {
+	const r = vm.audioVM({ playState: 2, volume: 30, serverState: 0 });
+	assert.equal(r.status, "offline");
+	assert.equal(r.offline, true);
+	assert.equal(r.playing, false);
+});
+
+test("audioVM volume bar scales to maxVolume", () => {
+	assert.equal(vm.audioVM({ playState: 2, volume: 40, maxVolume: 80, serverState: 2 }).volumePct, 50);
+	assert.equal(vm.audioVM({ playState: 2, volume: 30 }).volumePct, 30); // no maxVolume -> /100
+	assert.equal(vm.audioVM({ playState: 2, volume: 30 }).volume, 30);
+});
