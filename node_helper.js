@@ -38,6 +38,7 @@ module.exports = NodeHelper.create({
 			controls: config.controls || [],
 			rooms: config.rooms || [],
 			categories: config.categories || [],
+			hideEfmChildren: config.hideEfmChildren !== false,
 			reconnectMaxBackoffMs: config.reconnectMaxBackoffMs || 60000,
 			tokenStore: new TokenStore(path.join(dir, ".loxone-tokens.json"))
 		});

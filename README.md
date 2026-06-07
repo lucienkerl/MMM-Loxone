@@ -65,6 +65,7 @@ Add the module to the `modules` array in `config/config.js`:
         controls: ["PV-Anlage", "Wallbox Garage", "0d12f989-0060-c82f-ffff2083eaf2523c"],
         rooms: ["Wohnzimmer"],       // show all controls in these rooms
         categories: ["Energie"],    // show all controls in these categories
+        hideEfmChildren: true,      // EFM shows only its first level; its sub-meters aren't duplicated as tiles
 
         // Layout
         layout: "grid",             // "grid" or "list"
@@ -92,6 +93,7 @@ Add the module to the `modules` array in `config/config.js`:
 | `controls` | No | `[]` | Names or UUIDs of specific controls to display |
 | `rooms` | No | `[]` | Room names or UUIDs — all controls in these rooms are shown |
 | `categories` | No | `[]` | Category names or UUIDs — all controls in these categories are shown |
+| `hideEfmChildren` | No | `true` | Hide the meters an Energy-Flow Monitor is built from so it shows only its first-level flow (no duplicate sub-sensor tiles). Set `false` to show them. Controls you list explicitly in `controls` are always kept |
 | `layout` | No | `"grid"` | `"grid"` or `"list"` |
 | `columns` | No | `2` | Number of grid columns |
 | `showRoomLabels` | No | `true` | Show room name label in each tile header |
@@ -138,7 +140,7 @@ If a name is ambiguous (the same name in several rooms) or not found, the module
 
 | Loxone type | Display |
 |---|---|
-| `EFM`, `EnergyManager2` | Energy-flow radial SVG (production, grid, storage, consumption) |
+| `EFM`, `EnergyManager2` | Energy-flow radial SVG (production, grid, storage, consumption). The EFM shows only its first-level balance; the meters it is built from are hidden by default — see `hideEfmChildren` |
 | `Wallbox2` | Charging power, progress bar, session energy, status badge |
 | `Meter` | Power, cumulative energy, optional storage bar |
 | `IRoomControllerV2` | Current and target temperature |

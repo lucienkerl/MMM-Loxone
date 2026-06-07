@@ -90,3 +90,35 @@ test("namedStates resolves a control's states from a value map (missing -> null)
 	const values = new Map([[U("aaaa1111"), 11]]);
 	assert.deepEqual(s.namedStates(U("11111111"), values), { power: 11, sessionEnergy: null });
 });
+
+test("referencedControlUuids walks EFM node ctrlUuids recursively plus subcontrol uuids", () => {
+	const EFM = U("0efm0000");
+	const GRID = U("0e1d0001");
+	const PV = U("0e1d0002");
+	const SUB = U("0e1d0003");
+	const LEAF = U("0e1d0004");
+	const SC = U("0e5c0001");
+	const s = new Structure({
+		rooms: {}, cats: {},
+		controls: {
+			[EFM]: {
+				uuidAction: EFM, name: "Energieflussmonitor", type: "EFM", states: {},
+				details: { nodes: [
+					{ ctrlUuid: GRID, nodeType: "Grid" },
+					{ ctrlUuid: PV, nodeType: "Production", nodes: [
+						{ ctrlUuid: SUB, nodeType: "Load", nodes: [{ ctrlUuid: LEAF, nodeType: "Load" }, { title: "Rest" }] }
+					] }
+				] },
+				subControls: { [SC]: { uuidAction: SC, name: "Rest", type: "Meter", states: {} } }
+			}
+		},
+		globalStates: {}
+	});
+	assert.deepEqual([...s.referencedControlUuids(EFM)].sort(), [GRID, PV, SUB, LEAF, SC].sort());
+});
+
+test("referencedControlUuids is empty for a plain control without nodes/subControls", () => {
+	const s = new Structure(fixture());
+	assert.equal(s.referencedControlUuids(U("22222222")).size, 0);
+	assert.equal(s.referencedControlUuids(U("99999999")).size, 0);
+});

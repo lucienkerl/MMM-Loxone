@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const crypto = require("crypto");
 const EventEmitter = require("events");
 const { LoxoneClient } = require("../lib/loxone/LoxoneClient");
+const { Structure } = require("../lib/loxone/structure/Structure");
 const { TYPES } = require("../lib/loxone/protocol/MessageHeader");
 
 const U = (p) => `${p}-0000-0000-0000000000000000`;
@@ -146,6 +147,44 @@ test("coalesces multiple reconnect triggers into a single attempt", async () => 
 	await new Promise((r) => setTimeout(r, 60));
 	assert.equal(connectCount, 1, "three triggers must schedule exactly one reconnect");
 	client.stop();
+});
+
+function efmStructure() {
+	const CAT = U("00cc0001");
+	const EFM = U("0efm0000");
+	const NETZ = U("0e1d0001");
+	const PV = U("0e1d0002");
+	const OTHER = U("0e1d0009");
+	return new Structure({
+		rooms: {}, cats: { [CAT]: { uuid: CAT, name: "Energie" } },
+		controls: {
+			[EFM]: { uuidAction: EFM, name: "Energieflussmonitor", type: "EFM", cat: CAT, states: {},
+				details: { nodes: [{ ctrlUuid: NETZ, nodeType: "Grid" }, { ctrlUuid: PV, nodeType: "Production" }] } },
+			[NETZ]: { uuidAction: NETZ, name: "Netz", type: "Meter", cat: CAT, states: {} },
+			[PV]: { uuidAction: PV, name: "PV", type: "Meter", cat: CAT, states: {} },
+			[OTHER]: { uuidAction: OTHER, name: "Wallbox", type: "Wallbox2", cat: CAT, states: {} }
+		},
+		globalStates: {}
+	});
+}
+
+function displayNames(opt) {
+	const c = new LoxoneClient(Object.assign({ host: "h", user: "u", password: "p", clientUuid: "x", clientInfo: "i" }, opt));
+	c.structure = efmStructure();
+	c._resolveDisplay();
+	return c.display.map((u) => c.structure.getControl(u).name).sort();
+}
+
+test("a category sweep hides the meters an EFM references (absorbed into the EFM tile)", () => {
+	assert.deepEqual(displayNames({ categories: ["Energie"] }), ["Energieflussmonitor", "Wallbox"]);
+});
+
+test("an explicitly listed control survives EFM absorption", () => {
+	assert.deepEqual(displayNames({ categories: ["Energie"], controls: ["Netz"] }), ["Energieflussmonitor", "Netz", "Wallbox"]);
+});
+
+test("hideEfmChildren:false keeps the referenced meters as separate tiles", () => {
+	assert.deepEqual(displayNames({ categories: ["Energie"], hideEfmChildren: false }), ["Energieflussmonitor", "Netz", "PV", "Wallbox"]);
 });
 
 test("stop() cancels a pending reconnect so a stopped client stays stopped", async () => {
