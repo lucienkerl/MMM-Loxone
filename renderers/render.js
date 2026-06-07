@@ -56,51 +56,78 @@
 		Object.keys(attrs).forEach((k) => e.setAttribute(k, attrs[k]));
 		return e;
 	}
+	// viewBox tightly bounds the content vertically (top glyph ~y10 … bottom value
+	// ~y122) so there is no empty band scaling into a gap below the tile; the extra
+	// horizontal room (x -20…280, content centred on 130) keeps wide outer labels
+	// like "12.345kW 100%" from clipping at the edge.
+	const EFM_VIEWBOX = "-20 0 300 130";
 	function efmMarker(id, color) {
 		const m = svg("marker", { id, markerWidth: 7, markerHeight: 7, refX: 4, refY: 3.5, orient: "auto" });
 		m.appendChild(svg("path", { d: "M0,0 L7,3.5 L0,7 Z", fill: color }));
 		return m;
 	}
-	function efmFlow(x1, y1, x2, y2, color, active, markerId) {
-		const line = svg("line", { x1, y1, x2, y2, stroke: color, "stroke-width": 2.5, "stroke-dasharray": "3 6", "stroke-linecap": "round", "marker-end": `url(#${markerId})` });
-		if (active) {
-			line.appendChild(svg("animate", { attributeName: "stroke-dashoffset", from: 18, to: 0, dur: "0.9s", repeatCount: "indefinite" }));
-		} else {
-			line.setAttribute("opacity", "0.18");
-		}
-		return line;
+	function efmFlowLine(markerId) {
+		// Static skeleton; the dash animation lives in CSS (.lox-efm-line) so it
+		// keeps running across in-place updates instead of restarting each batch.
+		return svg("line", { stroke: COL.fg, "stroke-width": 2.5, "stroke-dasharray": "3 6", "stroke-linecap": "round", "marker-end": `url(#${markerId})`, class: "lox-efm-line" });
 	}
-	function efmNode(x, y, glyph, color, valueText) {
+	function efmNodeEl(x, y, glyph, color) {
 		const g = svg("g", { transform: `translate(${x},${y})`, "text-anchor": "middle" });
 		const a = svg("text", { y: 0, "font-size": 18 });
 		a.textContent = glyph;
-		const b = svg("text", { y: 18, "font-size": 12, fill: color });
-		b.textContent = valueText;
+		const value = svg("text", { y: 18, "font-size": 12, fill: color });
 		g.appendChild(a);
-		g.appendChild(b);
-		return g;
+		g.appendChild(value);
+		return { g, value };
 	}
-	function energyFlowSvg(vm, fmt) {
-		const root = svg("svg", { viewBox: "0 0 260 210", class: "lox-efm", width: "100%" });
+	function setEfmFlow(line, active, x1, y1, x2, y2, color, markerId) {
+		line.setAttribute("x1", x1);
+		line.setAttribute("y1", y1);
+		line.setAttribute("x2", x2);
+		line.setAttribute("y2", y2);
+		line.setAttribute("stroke", color);
+		line.setAttribute("marker-end", `url(#${markerId})`);
+		// toggling a class (vs replacing the node) keeps a still-active flow's CSS
+		// animation uninterrupted — only a genuine active<->idle flip restarts it.
+		line.classList.toggle("is-idle", !active);
+	}
+	// Build the SVG skeleton once; the returned refs are patched on every update.
+	function buildEnergyFlow() {
+		const root = svg("svg", { viewBox: EFM_VIEWBOX, class: "lox-efm", width: "100%" });
 		const defs = svg("defs", {});
 		[["efm-prod", COL.production], ["efm-imp", COL.import], ["efm-exp", COL.export], ["efm-sto", COL.storage]].forEach(([id, c]) => defs.appendChild(efmMarker(id, c)));
 		root.appendChild(defs);
-		root.appendChild(efmFlow(130, 48, 130, 84, COL.production, vm.producing, "efm-prod"));
+		const prod = efmFlowLine("efm-prod");
+		const grid = efmFlowLine("efm-imp");
+		const sto = efmFlowLine("efm-sto");
+		root.appendChild(prod);
+		root.appendChild(grid);
+		root.appendChild(sto);
+		const prodN = efmNodeEl(130, 26, "☀️", COL.production);
+		const gridN = efmNodeEl(28, 100, "⚡", COL.import);
+		const stoN = efmNodeEl(232, 100, "🔋", COL.storage);
+		const homeN = efmNodeEl(130, 100, "🏠", COL.fg);
+		[prodN, gridN, stoN, homeN].forEach((n) => root.appendChild(n.g));
+		return { root, refs: { prod, grid, sto, prodVal: prodN.value, gridVal: gridN.value, stoVal: stoN.value, homeVal: homeN.value } };
+	}
+	// Patch only the dynamic parts in place — no DOM rebuild, so the flow stays smooth.
+	function applyEnergyFlow(refs, vm, fmt) {
+		setEfmFlow(refs.prod, vm.producing, 130, 48, 130, 84, COL.production, "efm-prod");
 		if (vm.gridExporting) {
-			root.appendChild(efmFlow(102, 105, 58, 105, COL.export, true, "efm-exp"));
+			setEfmFlow(refs.grid, true, 102, 105, 58, 105, COL.export, "efm-exp");
 		} else {
-			root.appendChild(efmFlow(58, 105, 102, 105, COL.import, vm.gridImporting, "efm-imp"));
+			setEfmFlow(refs.grid, vm.gridImporting, 58, 105, 102, 105, COL.import, "efm-imp");
 		}
 		if (vm.storageCharging) {
-			root.appendChild(efmFlow(158, 105, 202, 105, COL.storage, true, "efm-sto"));
+			setEfmFlow(refs.sto, true, 158, 105, 202, 105, COL.storage, "efm-sto");
 		} else {
-			root.appendChild(efmFlow(202, 105, 158, 105, COL.storage, vm.storageDischarging, "efm-sto"));
+			setEfmFlow(refs.sto, vm.storageDischarging, 202, 105, 158, 105, COL.storage, "efm-sto");
 		}
-		root.appendChild(efmNode(130, 26, "☀️", COL.production, fmt(vm.production)));
-		root.appendChild(efmNode(28, 100, "⚡", vm.gridExporting ? COL.export : COL.import, fmt(Math.abs(vm.grid))));
-		root.appendChild(efmNode(232, 100, "🔋", COL.storage, fmt(Math.abs(vm.storage)) + (vm.soc !== null ? ` ${Math.round(vm.soc)}%` : "")));
-		root.appendChild(efmNode(130, 100, "🏠", COL.fg, fmt(vm.consumption)));
-		return root;
+		refs.prodVal.textContent = fmt(vm.production);
+		refs.gridVal.textContent = fmt(Math.abs(vm.grid));
+		refs.gridVal.setAttribute("fill", vm.gridExporting ? COL.export : COL.import);
+		refs.stoVal.textContent = fmt(Math.abs(vm.storage)) + (vm.soc !== null ? ` ${Math.round(vm.soc)}%` : "");
+		refs.homeVal.textContent = fmt(vm.consumption);
 	}
 
 	// ---- renderer factory + body builders ----
@@ -176,7 +203,25 @@
 		if (vm.sessionEnergy !== null) { w.appendChild(el("div", "lox-sub", formatLox("%.1f kWh", vm.sessionEnergy))); }
 		return w;
 	};
-	const efmBody = (vm, ctx, meta) => energyFlowSvg(vm, (kw) => formatLox((meta.details && meta.details.actualFormat) || "%.1f kW", kw));
+	const efmFmt = (meta) => (kw) => formatLox((meta.details && meta.details.actualFormat) || "%.1f kW", kw);
+	// Bespoke renderer (not makeRenderer): builds the SVG once and patches it in
+	// place so the flow animation never restarts on a state update.
+	const efmRenderer = {
+		toVM: (st) => VM.energyFlowVM(st),
+		render(meta, states, ctx) {
+			const tile = makeTile(meta, ctx);
+			const built = buildEnergyFlow();
+			tile._efm = { refs: built.refs, fmt: efmFmt(meta) };
+			applyEnergyFlow(built.refs, this.toVM(states), tile._efm.fmt);
+			tile._body.replaceChildren(built.root);
+			return tile;
+		},
+		update(tile, meta, states) {
+			if (tile._efm) {
+				applyEnergyFlow(tile._efm.refs, this.toVM(states), tile._efm.fmt);
+			}
+		}
+	};
 
 	const lvl = (level, text) => el("div", "lox-value lox-level-" + level, text);
 	const windowBody = (vm, ctx) => lvl(vm.level,
@@ -240,7 +285,7 @@
 		reg.register("Meter", makeRenderer((st, d) => VM.meterVM(st, d), meterBody));
 		reg.register("IRoomControllerV2", makeRenderer((st, d) => VM.roomControllerVM(st, d), roomBody));
 		reg.register("Wallbox2", makeRenderer((st, d) => VM.wallboxVM(st, d), wallboxBody));
-		reg.register(["EFM", "EnergyManager2"], makeRenderer((st) => VM.energyFlowVM(st), efmBody));
+		reg.register(["EFM", "EnergyManager2"], efmRenderer);
 		reg.register("WindowMonitor", makeRenderer((st) => VM.windowMonitorVM(st), windowBody));
 		reg.register("Gate", makeRenderer((st) => VM.gateVM(st), gateBody));
 		reg.register("PresenceDetector", makeRenderer((st) => VM.presenceVM(st), presenceBody));

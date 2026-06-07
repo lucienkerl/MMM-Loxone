@@ -32,6 +32,11 @@
 .lox-badge.is-charging { color: var(--lox-production); }
 .lox-room-temp .lox-target { font-size: 12px; color: var(--lox-muted); margin-left: 6px; }
 .lox-wb-head { display: flex; align-items: baseline; justify-content: space-between; }
+.lox-efm { display: block; }
 .lox-efm text { font-family: inherit; }
+.lox-efm-line { stroke-dashoffset: 18; animation: lox-efm-flow 0.9s linear infinite; }
+.lox-efm-line.is-idle { animation: none; opacity: 0.18; }
+@keyframes lox-efm-flow { from { stroke-dashoffset: 18; } to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) { .lox-efm-line { animation: none; } }
 .lox-status, .lox-warning { font-size: 11px; color: var(--lox-muted); margin: 4px 0; }
 .lox-warning { color: var(--lox-import); }
