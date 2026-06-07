@@ -18,7 +18,25 @@
 	}
 
 	// ---- DOM helpers (browser only; not called during registration) ----
-	const BUILTIN = { Wallbox2: "🚗", EFM: "⚡", EnergyManager2: "⚡", Meter: "🔌", IRoomControllerV2: "🌡", PowerUnit: "🔋" };
+	// Minimal monochrome line-icons (drawn in a 16x16 box, stroke = currentColor)
+	// — they replace the emoji so the look matches the MagicMirror theme. The same
+	// shapes are reused, in semantic colour, for the EFM nodes.
+	const ICON_SPECS = {
+		sun: [["circle", { cx: 8, cy: 8, r: 2.6 }],
+			["line", { x1: 12, y1: 8, x2: 13.9, y2: 8 }], ["line", { x1: 10.83, y1: 10.83, x2: 12.17, y2: 12.17 }],
+			["line", { x1: 8, y1: 12, x2: 8, y2: 13.9 }], ["line", { x1: 5.17, y1: 10.83, x2: 3.83, y2: 12.17 }],
+			["line", { x1: 4, y1: 8, x2: 2.1, y2: 8 }], ["line", { x1: 5.17, y1: 5.17, x2: 3.83, y2: 3.83 }],
+			["line", { x1: 8, y1: 4, x2: 8, y2: 2.1 }], ["line", { x1: 10.83, y1: 5.17, x2: 12.17, y2: 3.83 }]],
+		pylon: [["line", { x1: 8, y1: 2.5, x2: 4, y2: 13.5 }], ["line", { x1: 8, y1: 2.5, x2: 12, y2: 13.5 }],
+			["line", { x1: 5, y1: 5, x2: 11, y2: 5 }], ["line", { x1: 6, y1: 8, x2: 10, y2: 8 }], ["line", { x1: 4.9, y1: 11, x2: 11.1, y2: 11 }]],
+		house: [["polyline", { points: "3,8 8,3.2 13,8" }], ["polyline", { points: "4.6,8 4.6,13 11.4,13 11.4,8" }], ["polyline", { points: "7,13 7,10.6 9,10.6 9,13" }]],
+		battery: [["rect", { x: 2.5, y: 5, width: 9.5, height: 6, rx: 1 }], ["rect", { x: 12.2, y: 7, width: 1.5, height: 2, rx: 0.4 }]],
+		bolt: [["path", { d: "M9.5 2 L4.5 9 H7.5 L6.5 14 L11.5 7 H8.5 Z" }]],
+		car: [["path", { d: "M2.5 10.5 L4 7.6 L11 7.6 L13.5 10.5" }], ["line", { x1: 2.4, y1: 10.5, x2: 13.6, y2: 10.5 }], ["circle", { cx: 5, cy: 10.9, r: 1.1 }], ["circle", { cx: 11, cy: 10.9, r: 1.1 }]],
+		gauge: [["path", { d: "M3 11 A5 5 0 0 1 13 11" }], ["line", { x1: 8, y1: 11, x2: 10.6, y2: 7.6 }], ["circle", { cx: 8, cy: 11, r: 0.8 }]],
+		thermo: [["line", { x1: 8, y1: 3.6, x2: 8, y2: 9.4 }], ["circle", { cx: 8, cy: 11.3, r: 2.1 }], ["line", { x1: 9, y1: 5.6, x2: 10, y2: 5.6 }], ["line", { x1: 9, y1: 7.6, x2: 10, y2: 7.6 }]]
+	};
+	const BUILTIN = { Wallbox2: "car", EFM: "bolt", EnergyManager2: "bolt", Meter: "gauge", IRoomControllerV2: "thermo", PowerUnit: "battery" };
 
 	function el(tag, cls, text) {
 		const e = document.createElement(tag);
@@ -29,7 +47,7 @@
 
 	function makeIcon(iconSvg, type) {
 		const span = el("span", "lox-icon");
-		if (iconSvg) { span.innerHTML = iconSvg; } else { span.textContent = BUILTIN[type] || ""; }
+		if (iconSvg) { span.innerHTML = iconSvg; } else if (BUILTIN[type]) { span.appendChild(iconSvgEl(BUILTIN[type])); }
 		return span;
 	}
 
@@ -56,6 +74,15 @@
 		Object.keys(attrs).forEach((k) => e.setAttribute(k, attrs[k]));
 		return e;
 	}
+	function iconShapes(parent, key) {
+		(ICON_SPECS[key] || []).forEach(([t, a]) => parent.appendChild(svg(t, a)));
+		return parent;
+	}
+	// Standalone icon (tile headers): inherits text colour via currentColor.
+	function iconSvgEl(key) {
+		const root = svg("svg", { viewBox: "0 0 16 16", width: 14, height: 14, fill: "none", stroke: "currentColor", "stroke-width": 1.4, "stroke-linecap": "round", "stroke-linejoin": "round" });
+		return iconShapes(root, key);
+	}
 	// viewBox tightly bounds the content vertically (top glyph ~y10 … bottom value
 	// ~y122) so there is no empty band scaling into a gap below the tile; the extra
 	// horizontal room (x -20…280, content centred on 130) keeps wide outer labels
@@ -71,14 +98,20 @@
 		// keeps running across in-place updates instead of restarting each batch.
 		return svg("line", { stroke: COL.fg, "stroke-width": 2.5, "stroke-dasharray": "3 6", "stroke-linecap": "round", "marker-end": `url(#${markerId})`, class: "lox-efm-line" });
 	}
-	function efmNodeEl(x, y, glyph, color) {
+	function efmIconNode(x, y, key, color) {
 		const g = svg("g", { transform: `translate(${x},${y})`, "text-anchor": "middle" });
-		const a = svg("text", { y: 0, "font-size": 18 });
-		a.textContent = glyph;
+		const icon = svg("g", { fill: "none", stroke: color, "stroke-width": 1.4, "stroke-linecap": "round", "stroke-linejoin": "round", transform: "translate(-8,-14)" });
+		let fill = null;
+		if (key === "battery") {
+			// SoC fill, behind the outline; width (0…7.8) set per update from the SoC.
+			fill = svg("rect", { x: 3.4, y: 5.9, width: 0, height: 4.2, rx: 0.4, fill: color, stroke: "none" });
+			icon.appendChild(fill);
+		}
+		iconShapes(icon, key);
+		g.appendChild(icon);
 		const value = svg("text", { y: 18, "font-size": 12, fill: color });
-		g.appendChild(a);
 		g.appendChild(value);
-		return { g, value };
+		return { g, value, icon, fill };
 	}
 	function setEfmFlow(line, active, x1, y1, x2, y2, color, markerId) {
 		line.setAttribute("x1", x1);
@@ -103,12 +136,12 @@
 		root.appendChild(prod);
 		root.appendChild(grid);
 		root.appendChild(sto);
-		const prodN = efmNodeEl(130, 26, "☀️", COL.production);
-		const gridN = efmNodeEl(28, 100, "⚡", COL.import);
-		const stoN = efmNodeEl(232, 100, "🔋", COL.storage);
-		const homeN = efmNodeEl(130, 100, "🏠", COL.fg);
+		const prodN = efmIconNode(130, 26, "sun", COL.production);
+		const gridN = efmIconNode(28, 100, "pylon", COL.import);
+		const stoN = efmIconNode(232, 100, "battery", COL.storage);
+		const homeN = efmIconNode(130, 100, "house", COL.fg);
 		[prodN, gridN, stoN, homeN].forEach((n) => root.appendChild(n.g));
-		return { root, refs: { prod, grid, sto, prodVal: prodN.value, gridVal: gridN.value, stoVal: stoN.value, homeVal: homeN.value } };
+		return { root, refs: { prod, grid, sto, prodVal: prodN.value, gridVal: gridN.value, stoVal: stoN.value, homeVal: homeN.value, gridIcon: gridN.icon, stoFill: stoN.fill } };
 	}
 	// Patch only the dynamic parts in place — no DOM rebuild, so the flow stays smooth.
 	function applyEnergyFlow(refs, vm, fmt) {
@@ -124,9 +157,15 @@
 			setEfmFlow(refs.sto, vm.storageDischarging, 202, 105, 158, 105, COL.storage, "efm-sto");
 		}
 		refs.prodVal.textContent = fmt(vm.production);
+		const gridColor = vm.gridExporting ? COL.export : COL.import;
 		refs.gridVal.textContent = fmt(Math.abs(vm.grid));
-		refs.gridVal.setAttribute("fill", vm.gridExporting ? COL.export : COL.import);
+		refs.gridVal.setAttribute("fill", gridColor);
+		refs.gridIcon.setAttribute("stroke", gridColor);
 		refs.stoVal.textContent = fmt(Math.abs(vm.storage)) + (vm.soc !== null ? ` ${Math.round(vm.soc)}%` : "");
+		if (refs.stoFill) {
+			const frac = vm.soc === null ? 0 : Math.max(0, Math.min(1, vm.soc / 100));
+			refs.stoFill.setAttribute("width", (7.8 * frac).toFixed(2));
+		}
 		refs.homeVal.textContent = fmt(vm.consumption);
 	}
 

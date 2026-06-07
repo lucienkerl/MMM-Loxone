@@ -15,6 +15,7 @@
 .lox-tile { padding: 2px 0; }
 .lox-tile-head { display: flex; align-items: baseline; gap: 8px; }
 .lox-icon { font-size: 14px; }
+.lox-icon svg { width: 1em; height: 1em; vertical-align: -0.15em; }
 .lox-title { font-size: 13px; }
 .lox-room { font-size: 10px; text-transform: uppercase; color: var(--lox-muted); margin-left: auto; }
 .lox-tile-body { margin-top: 4px; }
