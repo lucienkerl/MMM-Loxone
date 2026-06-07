@@ -2,3 +2,6 @@ MMM-Loxone.iml
 .idea/
 node_modules/
 .superpowers/
+.loxone-tokens.json
+.loxone-client-uuid
+sample-data/LoxAPP3.json
