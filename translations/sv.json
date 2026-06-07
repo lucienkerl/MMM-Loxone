@@ -1,4 +1,16 @@
 {
-  "LOADING": "Laddar...",
-  "MISSING_OBSERVING_UUIDS": "Saknar 'observingUuids' under konfigurationen i filen 'config.json'!"
+	"LOADING": "Laddar...",
+	"CONNECTING": "Ansluter…",
+	"OFFLINE": "Offline",
+	"OOS": "Miniserver startar om…",
+	"ERROR": "Fel",
+	"MISSING_CONFIG": "host/användare/lösenord saknas i config.js",
+	"NOT_FOUND": "Hittades inte",
+	"AMBIGUOUS": "Tvetydigt namn",
+	"ON": "På",
+	"OFF": "Av",
+	"WB_CHARGING": "Laddar",
+	"WB_CONNECTED": "Ansluten",
+	"WB_IDLE": "Ledig",
+	"SOC": "Laddnivå"
 }
