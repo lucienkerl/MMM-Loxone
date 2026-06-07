@@ -2,6 +2,16 @@
 
 A [MagicMirror²](https://github.com/MichMich/MagicMirror/) module that connects to your Loxone Miniserver, subscribes to live control states, and displays them as a compact tile grid on the mirror. It is **read-only** — it displays state but sends no commands to the Miniserver.
 
+## Preview
+
+![MMM-Loxone tile grid on the mirror](docs/screenshots/overview.png)
+
+The **Energy-Flow Monitor** renders as a radial diagram — house in the centre, with production, grid and storage around it; arrow direction and colour follow the live energy flow (green = production/export, red = grid import, blue = storage). The **Wallbox** shows charging power, a progress bar and session energy:
+
+![Energy-Flow Monitor and Wallbox close-up](docs/screenshots/energy-wallbox.png)
+
+> These are the actual renderers with sample data (Hybrid dark theme); the flow arrows animate in the live module. To preview locally **without a Miniserver**, serve the repo root with any static server (e.g. `python3 -m http.server`) and open `docs/preview/index.html`.
+
 ## Features
 
 - Token-based authentication (no permanent credential storage; tokens refreshed automatically)
@@ -83,6 +93,40 @@ Add the module to the `modules` array in `config/config.js`:
 | `updateThrottleMs` | No | `250` | State-update coalesce window in milliseconds |
 | `permission` | No | `"app"` | Loxone token permission (`"app"` or `"web"`) |
 | `reconnectMaxBackoffMs` | No | `60000` | Maximum reconnect back-off in milliseconds |
+
+### Example configurations
+
+**Minimal** — a handful of controls by name:
+
+```js
+config: {
+    host: "192.168.0.46", user: "mirror", password: "secret",
+    controls: ["Wallbox", "Energieflussmonitor", "Außentemperatur"]
+}
+```
+
+**By room** — everything supported in selected rooms, three columns:
+
+```js
+config: {
+    host: "dns.loxonecloud.com/504F94A0XXXX", user: "mirror", password: "secret",
+    rooms: ["Technik", "Wohnzimmer"],
+    columns: 3
+}
+```
+
+**Energy dashboard** — curated list, no room labels:
+
+```js
+config: {
+    host: "192.168.0.46", user: "mirror", password: "secret",
+    controls: ["Energieflussmonitor", "Wallbox", "PV", "Speicher", "Netz"],
+    layout: "list",
+    showRoomLabels: false
+}
+```
+
+If a name is ambiguous (the same name in several rooms) or not found, the module shows a small warning tile and keeps rendering the rest. Disambiguate with a room-qualified name (`"Technik/Wallbox"`) or the control's UUID.
 
 ## Supported controls
 

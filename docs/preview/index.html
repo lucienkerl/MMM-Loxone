@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>MMM-Loxone preview</title>
+<link rel="stylesheet" href="../../MMM-Loxone.css">
+<style>
+	body { background: #000; margin: 0; padding: 28px; font-family: "Roboto Condensed", "Segoe UI", Roboto, sans-serif; }
+	.board { max-width: 520px; }
+	.lox-grid { gap: 22px 28px; }
+</style>
+</head>
+<body>
+<div class="mmm-loxone board" id="board"></div>
+
+<script src="../../renderers/viewmodels.js"></script>
+<script src="../../renderers/render.js"></script>
+<script>
+	var dict = { ON: "Ein", OFF: "Aus", WB_CHARGING: "Lädt", WB_CONNECTED: "Verbunden", WB_IDLE: "Frei", SOC: "SoC" };
+	var ctx = { translate: function (k) { return dict[k] || k; }, showRoom: true };
+
+	var demo = [
+		{ meta: { id: "efm", type: "EFM", name: "Energieflussmonitor", room: "Technik", details: { actualFormat: "%.1f kW" } },
+		  states: { Ppwr: 6.2, Gpwr: -1.1, Spwr: -2.0, Ssoc: 78 } },
+		{ meta: { id: "wb", type: "Wallbox2", name: "Wallbox", room: "Garage", details: { actualFormat: "%.1f kW", totalFormat: "%.1f kWh", max: 11 } },
+		  states: { actual: 7.7, total: 1234.5, connected: 1, enabled: 1, active: 1, limit: 11, session: "{\"power\":7.7,\"energy\":18.4}" } },
+		{ meta: { id: "pv", type: "Meter", name: "PV", room: "Technik", details: { type: "unidirectional", actualFormat: "%.2f kW", totalFormat: "%.0f kWh" } },
+		  states: { actual: 6.21, total: 12840 } },
+		{ meta: { id: "bat", type: "Meter", name: "Speicher", room: "Technik", details: { type: "storage", actualFormat: "%.2f kW", storageFormat: "%.0f%%" } },
+		  states: { actual: -2.0, storage: 78 } },
+		{ meta: { id: "irc", type: "IRoomControllerV2", name: "Wohnzimmer", room: "Wohnen", details: { format: "%.1f°" } },
+		  states: { tempActual: 21.4, tempTarget: 22 } },
+		{ meta: { id: "out", type: "InfoOnlyAnalog", name: "Außentemperatur", room: "Garten", details: { format: "%.1f° C" } },
+		  states: { value: 12.4 } },
+		{ meta: { id: "co2", type: "TextState", name: "CO₂ Schlafzimmer", room: "Schlafen" },
+		  states: { textAndIcon: "612 ppm", iconAndColor: "{\"color\":\"#7bd06a\"}" } },
+		{ meta: { id: "gar", type: "InfoOnlyDigital", name: "Garagentor", room: "Garage", details: { text: { on: "Offen", off: "Geschlossen" }, color: { on: "#ff6b6b", off: "#7bd06a" } } },
+		  states: { active: 0 } },
+		{ meta: { id: "sw", type: "Switch", name: "Terrasse", room: "Garten" }, states: { active: 1 } },
+		{ meta: { id: "fan", type: "Slider", name: "Lüftung", room: "Bad", details: { format: "%.0f %%", min: 0, max: 100 } }, states: { value: 60 } }
+	];
+
+	var reg = self.LoxRender.buildRegistry();
+	var grid = document.createElement("div");
+	grid.className = "lox-grid lox-layout-grid";
+	grid.style.gridTemplateColumns = "repeat(2, auto)";
+	demo.forEach(function (d) {
+		var r = reg.resolve(d.meta.type) || self.LoxRender.genericFallbackRenderer();
+		grid.appendChild(r.render(d.meta, d.states, ctx));
+	});
+	document.getElementById("board").appendChild(grid);
+</script>
+</body>
+</html>
