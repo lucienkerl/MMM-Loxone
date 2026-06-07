@@ -6,6 +6,7 @@
 	--lox-export: #7bd06a;
 	--lox-storage: #5aa9ff;
 	--lox-consume: #9fe08a;
+	--lox-warn: #ffb454;
 	color: var(--lox-fg);
 	font-weight: 300;
 }
@@ -20,6 +21,11 @@
 .lox-value { font-size: 20px; font-weight: 300; }
 .lox-sub { font-size: 11px; color: var(--lox-muted); }
 .lox-state.is-on { color: var(--lox-production); }
+.lox-level-ok { color: var(--lox-production); }
+.lox-level-warn { color: var(--lox-warn); }
+.lox-level-alert { color: var(--lox-import); }
+.lox-level-mid { color: var(--lox-fg); }
+.lox-muted { color: var(--lox-muted); }
 .lox-bar { height: 3px; background: #1c1c1c; margin-top: 6px; }
 .lox-bar-fill { height: 3px; background: var(--lox-production); }
 .lox-badge { font-size: 10px; text-transform: uppercase; color: var(--lox-muted); margin-left: 8px; }

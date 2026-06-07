@@ -16,7 +16,14 @@
 <script src="../../renderers/viewmodels.js"></script>
 <script src="../../renderers/render.js"></script>
 <script>
-	var dict = { ON: "Ein", OFF: "Aus", WB_CHARGING: "Lädt", WB_CONNECTED: "Verbunden", WB_IDLE: "Frei", SOC: "SoC" };
+	var dict = {
+		ON: "Ein", OFF: "Aus", WB_CHARGING: "Lädt", WB_CONNECTED: "Verbunden", WB_IDLE: "Frei", SOC: "SoC",
+		WIN_OPEN: "offen", WIN_TILTED: "gekippt", WIN_CLOSED: "zu", GATE_OPEN: "Offen", GATE_CLOSED: "Geschlossen",
+		PRESENCE_ACTIVE: "Bewegung", PRESENCE_IDLE: "frei", EMERGENCY_ALARM: "ALARM", EMERGENCY_OK: "OK",
+		AUTO: "Auto", SHADE_SAFETY: "Sicherheit", FORECAST_TODAY: "heute", FORECAST_TOMORROW: "morgen",
+		ALARM_RINGING: "Klingelt", VENT_LEVEL: "Stufe", SAUNA_READY: "Bereit", SAUNA_HEATING: "Heizt",
+		INTERCOM_RINGING: "Klingelt", INTERCOM_LAST: "zuletzt", STATUS_FAULT: "Störung", STATUS_OK: "OK"
+	};
 	var ctx = { translate: function (k) { return dict[k] || k; }, showRoom: true };
 
 	var demo = [
@@ -37,7 +44,14 @@
 		{ meta: { id: "gar", type: "InfoOnlyDigital", name: "Garagentor", room: "Garage", details: { text: { on: "Offen", off: "Geschlossen" }, color: { on: "#ff6b6b", off: "#7bd06a" } } },
 		  states: { active: 0 } },
 		{ meta: { id: "sw", type: "Switch", name: "Terrasse", room: "Garten" }, states: { active: 1 } },
-		{ meta: { id: "fan", type: "Slider", name: "Lüftung", room: "Bad", details: { format: "%.0f %%", min: 0, max: 100 } }, states: { value: 60 } }
+		{ meta: { id: "fan", type: "Slider", name: "Lüftung", room: "Bad", details: { format: "%.0f %%", min: 0, max: 100 } }, states: { value: 60 } },
+		{ meta: { id: "win", type: "WindowMonitor", name: "Fenster & Türen", room: "Haus" }, states: { numOpen: 1, numTilted: 1, numClosed: 12, numOffline: 0 } },
+		{ meta: { id: "gate", type: "Gate", name: "Hoftor", room: "Hof" }, states: { position: 0, active: 0 } },
+		{ meta: { id: "pres", type: "PresenceDetector", name: "Bewegung Flur", room: "Flur" }, states: { active: 0 } },
+		{ meta: { id: "jal", type: "Jalousie", name: "Jalousie Süd", room: "Wohnen" }, states: { position: 0.6, autoActive: 1 } },
+		{ meta: { id: "light", type: "LightControllerV2", name: "Licht Wohnen", room: "Wohnen" }, states: { activeMoods: "[3]", moodList: "[{\"id\":778,\"name\":\"Aus\"},{\"id\":3,\"name\":\"Gemütlich\"}]" } },
+		{ meta: { id: "spot", type: "SpotPriceOptimizer", name: "Strompreis", room: "Zentral", details: { format: "%.3f €/kWh" } }, states: { current: 0.124, low: 0.15, high: 0.35, veryHigh: 0.45 } },
+		{ meta: { id: "fc", type: "PvProductionForecast", name: "PV-Vorhersage", room: "Zentral" }, states: { today: 38.2, tomorrow: 41.7 } }
 	];
 
 	var reg = self.LoxRender.buildRegistry();

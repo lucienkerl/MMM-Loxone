@@ -167,9 +167,128 @@
 		};
 	}
 
+	function windowMonitorVM(states) {
+		const open = num(states.numOpen);
+		const tilted = num(states.numTilted);
+		const closed = num(states.numClosed);
+		const offline = num(states.numOffline);
+		return { open, tilted, closed, offline, level: open > 0 ? "alert" : (tilted > 0 || offline > 0) ? "warn" : "ok" };
+	}
+
+	function gateVM(states) {
+		const pos = num(states.position);
+		return { pct: Math.round(pos * 100), open: pos > 0.01, moving: !!states.active };
+	}
+
+	function presenceVM(states) {
+		return { active: !!states.active };
+	}
+
+	function aalEmergencyVM(states) {
+		return { alarm: num(states.status) > 0 };
+	}
+
+	function jalousieVM(states) {
+		const pos = num(states.position);
+		return { pct: Math.round(pos * 100), moving: !!states.up || !!states.down, auto: !!states.autoActive };
+	}
+
+	function lightControllerVM(states) {
+		let moods = [];
+		try {
+			const active = JSON.parse(states.activeMoods || "[]");
+			const list = JSON.parse(states.moodList || "[]");
+			const byId = {};
+			list.forEach((m) => { byId[m.id] = m.name; });
+			moods = active.map((id) => byId[id] || ("#" + id));
+		} catch (e) {
+			moods = [];
+		}
+		return { moods: moods.join(" + ") };
+	}
+
+	function centralJalousieVM(states) {
+		return { safety: !!states.safetyActive };
+	}
+
+	function pvForecastVM(states) {
+		return { today: formatLox("%.1f kWh", states.today), tomorrow: formatLox("%.1f kWh", states.tomorrow) };
+	}
+
+	function spotPriceVM(states, details) {
+		const d = details || {};
+		const cur = Number(states.current);
+		let level = "mid";
+		if (Number.isFinite(cur)) {
+			if (states.veryHigh !== undefined && cur >= Number(states.veryHigh)) {
+				level = "alert";
+			} else if (states.high !== undefined && cur >= Number(states.high)) {
+				level = "warn";
+			} else if (states.low !== undefined && cur <= Number(states.low)) {
+				level = "ok";
+			}
+		}
+		return { price: formatLox(d.format || "%.3f €/kWh", states.current), level };
+	}
+
+	function loxTimeToHM(loxSec) {
+		const n = Number(loxSec);
+		if (!Number.isFinite(n) || n <= 0) {
+			return null;
+		}
+		const loxEpoch = Date.UTC(2009, 0, 1) / 1000;
+		const d = new Date((loxEpoch + n) * 1000);
+		return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+	}
+
+	function alarmClockVM(states) {
+		return { enabled: !!states.isEnabled, ringing: !!states.isAlarmActive, nextTime: loxTimeToHM(states.nextEntryTime) };
+	}
+
+	function heatmixerVM(states, details) {
+		const d = details || {};
+		return { current: formatLox(d.format || "%.1f °C", states.tempActual), target: formatLox(d.format || "%.1f °C", states.tempTarget) };
+	}
+
+	function ventilationVM(states) {
+		const hum = states.humidityIndoor;
+		return { speed: num(states.speed), humidity: hum === null || hum === undefined ? null : Math.round(num(hum)) };
+	}
+
+	function saunaVM(states, details) {
+		const d = details || {};
+		return {
+			temp: formatLox(d.format || "%.0f°", states.tempActual),
+			target: formatLox(d.format || "%.0f°", states.tempTarget),
+			active: !!states.active,
+			ready: !!states.ready
+		};
+	}
+
+	function steakThermoVM(states, details) {
+		const d = details || {};
+		return {
+			current: formatLox(d.format || "%.1f°", states.temperatureGreen),
+			target: formatLox(d.format || "%.1f°", states.targetGreen),
+			active: !!states.isActive
+		};
+	}
+
+	function intercomVM(states) {
+		return { ringing: !!states.bell, lastTime: loxTimeToHM(states.lastBellTimestamp) };
+	}
+
+	function statusMonitorVM(states) {
+		const defective = num(states.numDef);
+		return { defective, alert: defective > 0 };
+	}
+
 	const api = {
 		formatLox, clampPct, infoAnalogVM, infoDigitalVM, infoTextVM, textStateVM,
-		switchVM, sliderVM, meterVM, roomControllerVM, wallboxVM, energyFlowVM
+		switchVM, sliderVM, meterVM, roomControllerVM, wallboxVM, energyFlowVM,
+		windowMonitorVM, gateVM, presenceVM, aalEmergencyVM, jalousieVM, lightControllerVM,
+		centralJalousieVM, pvForecastVM, spotPriceVM, alarmClockVM, heatmixerVM, ventilationVM,
+		saunaVM, steakThermoVM, intercomVM, statusMonitorVM
 	};
 
 	if (typeof module === "object" && module.exports) {

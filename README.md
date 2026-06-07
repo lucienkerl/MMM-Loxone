@@ -16,7 +16,7 @@ The **Energy-Flow Monitor** renders as a radial diagram — house in the centre,
 
 - Token-based authentication (no permanent credential storage; tokens refreshed automatically)
 - Name-or-UUID control selection — identify controls, rooms, or categories by human-readable name or UUID
-- Supported control types out of the box: Energy-Flow Manager (EFM / EnergyManager2), Wallbox (Wallbox2), Meter, Intelligent Room Controller (IRoomControllerV2), InfoOnlyAnalog, InfoOnlyDigital, InfoOnlyText, TextState, Switch, Pushbutton, Slider. Unknown types fall back to a generic value renderer
+- Broad control support out of the box: **energy** (Energy-Flow EFM/EnergyManager2, Wallbox, Meter, PV forecast, spot price), **security & status** (window/door monitoring, gate, presence, emergency, status monitor), **shading & light** (blinds, light scenes), **climate** (room controller, heat mixer, ventilation, sauna), plus generic Info/Switch/Slider/TextState — see the [full table](#supported-controls). Unknown types fall back to a generic value renderer
 - Hybrid dark theme with semantic color coding (green = production/export, red = import, blue = storage)
 - Live state updates coalesced at a configurable throttle (default 250 ms)
 - Automatic reconnection with exponential back-off
@@ -142,6 +142,22 @@ If a name is ambiguous (the same name in several rooms) or not found, the module
 | `TextState` | Text with state color |
 | `Switch`, `Pushbutton` | On/Off state |
 | `Slider` | Value with progress bar |
+| `WindowMonitor` | Open / tilted / closed counts, coloured by worst state |
+| `Gate` | Garage/gate open or closed + position |
+| `PresenceDetector` | Motion detected / clear |
+| `AalEmergency` | Emergency-call alarm status |
+| `Jalousie` | Blind position % + auto badge |
+| `CentralJalousie` | Central shading status |
+| `LightControllerV2` | Active light scene name |
+| `PvProductionForecast` | PV forecast (today / tomorrow) |
+| `SpotPriceOptimizer` | Current electricity price, coloured by level |
+| `AlarmClock` | Next alarm time |
+| `Heatmixer` | Heating flow temperature (actual → target) |
+| `Ventilation` | Fan level + indoor humidity |
+| `Sauna` | Temperature + ready/heating status |
+| `SteakThermo` | Cooking-probe temperature (actual → target) |
+| `Intercom` | Doorbell — ringing / last ring time |
+| `StatusMonitor` | Fault count / OK |
 | *(unknown)* | First available state value as text |
 
 ## License

@@ -81,3 +81,99 @@ test("energyFlowVM: consumption + flags + soc", () => {
 	assert.equal(i.soc, 76);
 	assert.equal(vm.energyFlowVM({ Ppwr: 0, Gpwr: 0, Spwr: 0 }).soc, null);
 });
+
+test("windowMonitorVM levels: ok / warn / alert", () => {
+	assert.equal(vm.windowMonitorVM({ numOpen: 0, numTilted: 0, numClosed: 5, numOffline: 0 }).level, "ok");
+	assert.equal(vm.windowMonitorVM({ numTilted: 1, numClosed: 4 }).level, "warn");
+	assert.deepEqual(vm.windowMonitorVM({ numOpen: 2, numTilted: 1, numClosed: 14, numOffline: 0 }),
+		{ open: 2, tilted: 1, closed: 14, offline: 0, level: "alert" });
+});
+
+test("gateVM position + open + moving", () => {
+	assert.deepEqual(vm.gateVM({ position: 0, active: 0 }), { pct: 0, open: false, moving: false });
+	assert.deepEqual(vm.gateVM({ position: 0.5, active: 1 }), { pct: 50, open: true, moving: true });
+	assert.equal(vm.gateVM({ position: 1 }).open, true);
+});
+
+test("presenceVM + aalEmergencyVM", () => {
+	assert.deepEqual(vm.presenceVM({ active: 1 }), { active: true });
+	assert.equal(vm.aalEmergencyVM({ status: 1 }).alarm, true);
+	assert.equal(vm.aalEmergencyVM({ status: 0 }).alarm, false);
+});
+
+test("jalousieVM position / auto / moving", () => {
+	const r = vm.jalousieVM({ position: 0.6, up: 0, down: 0, autoActive: 1 });
+	assert.equal(r.pct, 60);
+	assert.equal(r.auto, true);
+	assert.equal(r.moving, false);
+	assert.equal(vm.jalousieVM({ position: 0.2, down: 1 }).moving, true);
+});
+
+test("lightControllerVM maps active mood ids to names", () => {
+	const list = "[{\"id\":778,\"name\":\"Aus\"},{\"id\":3,\"name\":\"Gemütlich\"}]";
+	assert.equal(vm.lightControllerVM({ activeMoods: "[778]", moodList: list }).moods, "Aus");
+	assert.equal(vm.lightControllerVM({ activeMoods: "[778,3]", moodList: list }).moods, "Aus + Gemütlich");
+	assert.equal(vm.lightControllerVM({ activeMoods: "bad" }).moods, "");
+});
+
+test("centralJalousieVM safety", () => {
+	assert.equal(vm.centralJalousieVM({ safetyActive: 1 }).safety, true);
+	assert.equal(vm.centralJalousieVM({ safetyActive: 0 }).safety, false);
+});
+
+test("pvForecastVM formats today/tomorrow", () => {
+	assert.deepEqual(vm.pvForecastVM({ today: 38.2, tomorrow: 41.7 }), { today: "38.2 kWh", tomorrow: "41.7 kWh" });
+});
+
+test("spotPriceVM level classification + price format", () => {
+	const D = { format: "%.3f €/kWh" };
+	const t = { veryHigh: 0.4, high: 0.3, low: 0.1 };
+	assert.equal(vm.spotPriceVM(Object.assign({ current: 0.05 }, t), D).level, "ok");
+	assert.equal(vm.spotPriceVM(Object.assign({ current: 0.32 }, t), D).level, "warn");
+	assert.equal(vm.spotPriceVM(Object.assign({ current: 0.45 }, t), D).level, "alert");
+	assert.equal(vm.spotPriceVM(Object.assign({ current: 0.2 }, t), D).level, "mid");
+	assert.equal(vm.spotPriceVM({ current: 0.283 }, D).price, "0.283 €/kWh");
+});
+
+test("alarmClockVM flags + nextTime format", () => {
+	assert.equal(vm.alarmClockVM({ isEnabled: 1 }).enabled, true);
+	assert.equal(vm.alarmClockVM({ isAlarmActive: 1 }).ringing, true);
+	assert.equal(vm.alarmClockVM({ nextEntryTime: 0 }).nextTime, null);
+	assert.match(vm.alarmClockVM({ nextEntryTime: 500000000 }).nextTime, /^\d{2}:\d{2}$/);
+});
+
+test("heatmixerVM current/target", () => {
+	assert.deepEqual(vm.heatmixerVM({ tempActual: 38.4, tempTarget: 40 }, { format: "%.1f °C" }),
+		{ current: "38.4 °C", target: "40.0 °C" });
+});
+
+test("ventilationVM speed + humidity", () => {
+	assert.deepEqual(vm.ventilationVM({ speed: 2, humidityIndoor: 44.6 }), { speed: 2, humidity: 45 });
+	assert.equal(vm.ventilationVM({ speed: 1 }).humidity, null);
+});
+
+test("saunaVM temp + status flags", () => {
+	const r = vm.saunaVM({ tempActual: 82, tempTarget: 90, active: 1, ready: 0 }, {});
+	assert.equal(r.temp, "82°");
+	assert.equal(r.target, "90°");
+	assert.equal(r.active, true);
+	assert.equal(r.ready, false);
+});
+
+test("steakThermoVM green probe", () => {
+	const r = vm.steakThermoVM({ temperatureGreen: 56.3, targetGreen: 60, isActive: 1 }, { format: "%.1f°" });
+	assert.equal(r.current, "56.3°");
+	assert.equal(r.target, "60.0°");
+	assert.equal(r.active, true);
+});
+
+test("intercomVM ringing + last time", () => {
+	assert.equal(vm.intercomVM({ bell: 1 }).ringing, true);
+	assert.equal(vm.intercomVM({ bell: 0, lastBellTimestamp: 0 }).lastTime, null);
+	assert.match(vm.intercomVM({ lastBellTimestamp: 500000000 }).lastTime, /^\d{2}:\d{2}$/);
+});
+
+test("statusMonitorVM defective alert", () => {
+	assert.deepEqual(vm.statusMonitorVM({ numDef: 0 }), { defective: 0, alert: false });
+	assert.deepEqual(vm.statusMonitorVM({ numDef: 2 }), { defective: 2, alert: true });
+});

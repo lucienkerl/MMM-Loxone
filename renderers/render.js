@@ -178,6 +178,57 @@
 	};
 	const efmBody = (vm, ctx, meta) => energyFlowSvg(vm, (kw) => formatLox((meta.details && meta.details.actualFormat) || "%.1f kW", kw));
 
+	const lvl = (level, text) => el("div", "lox-value lox-level-" + level, text);
+	const windowBody = (vm, ctx) => lvl(vm.level,
+		vm.open + " " + tr(ctx, "WIN_OPEN", "open") + " · " + vm.tilted + " " + tr(ctx, "WIN_TILTED", "tilted") + " · " + vm.closed + " " + tr(ctx, "WIN_CLOSED", "closed"));
+	const gateBody = (vm, ctx) => {
+		const w = el("div", "lox-gate");
+		w.appendChild(lvl(vm.open ? "alert" : "ok", tr(ctx, vm.open ? "GATE_OPEN" : "GATE_CLOSED", vm.open ? "Open" : "Closed")));
+		if (vm.pct > 0 && vm.pct < 100) { w.appendChild(bar(vm.pct)); }
+		return w;
+	};
+	const presenceBody = (vm, ctx) => lvl(vm.active ? "warn" : "ok", tr(ctx, vm.active ? "PRESENCE_ACTIVE" : "PRESENCE_IDLE", vm.active ? "Motion" : "Clear"));
+	const aalBody = (vm, ctx) => lvl(vm.alarm ? "alert" : "ok", tr(ctx, vm.alarm ? "EMERGENCY_ALARM" : "EMERGENCY_OK", vm.alarm ? "ALARM" : "OK"));
+	const jalousieBody = (vm, ctx) => {
+		const w = el("div", "lox-jalousie");
+		const head = el("div", "lox-value", vm.pct + " %");
+		if (vm.auto) { head.appendChild(el("span", "lox-badge", tr(ctx, "AUTO", "Auto"))); }
+		w.appendChild(head);
+		w.appendChild(bar(vm.pct));
+		return w;
+	};
+	const lightBody = (vm) => el("div", "lox-value lox-state", vm.moods || "—");
+	const centralJalousieBody = (vm, ctx) => lvl(vm.safety ? "warn" : "ok", vm.safety ? tr(ctx, "SHADE_SAFETY", "Safety") : "—");
+	const pvForecastBody = (vm, ctx) => {
+		const w = el("div", "lox-forecast");
+		w.appendChild(el("div", "lox-value", vm.today));
+		w.appendChild(el("div", "lox-sub", tr(ctx, "FORECAST_TODAY", "today") + " · " + vm.tomorrow + " " + tr(ctx, "FORECAST_TOMORROW", "tomorrow")));
+		return w;
+	};
+	const spotPriceBody = (vm) => lvl(vm.level, vm.price);
+	const alarmBody = (vm, ctx) => {
+		if (vm.ringing) {
+			return lvl("alert", tr(ctx, "ALARM_RINGING", "Ringing"));
+		}
+		return el("div", "lox-value" + (vm.enabled ? "" : " lox-muted"), vm.nextTime || "—");
+	};
+	const ventBody = (vm, ctx) => {
+		const w = el("div", "lox-vent");
+		w.appendChild(el("div", "lox-value", tr(ctx, "VENT_LEVEL", "Level") + " " + vm.speed));
+		if (vm.humidity !== null) { w.appendChild(el("div", "lox-sub", vm.humidity + " % rH")); }
+		return w;
+	};
+	const saunaBody = (vm, ctx) => {
+		const w = el("div", "lox-sauna");
+		const head = el("div", "lox-value", vm.temp);
+		head.appendChild(el("span", "lox-badge", vm.ready ? tr(ctx, "SAUNA_READY", "Ready") : vm.active ? tr(ctx, "SAUNA_HEATING", "Heating") : tr(ctx, "OFF", "Off")));
+		w.appendChild(head);
+		return w;
+	};
+	const intercomBody = (vm, ctx) => el("div", "lox-value" + (vm.ringing ? " lox-level-warn" : ""),
+		vm.ringing ? tr(ctx, "INTERCOM_RINGING", "Ringing") : (vm.lastTime ? tr(ctx, "INTERCOM_LAST", "last") + " " + vm.lastTime : "—"));
+	const statusMonBody = (vm, ctx) => lvl(vm.alert ? "alert" : "ok", vm.alert ? vm.defective + " " + tr(ctx, "STATUS_FAULT", "fault") : tr(ctx, "STATUS_OK", "OK"));
+
 	function buildRegistry() {
 		const reg = createRegistry();
 		reg.register("InfoOnlyAnalog", makeRenderer((st, d) => VM.infoAnalogVM(st, d), analogBody));
@@ -190,6 +241,22 @@
 		reg.register("IRoomControllerV2", makeRenderer((st, d) => VM.roomControllerVM(st, d), roomBody));
 		reg.register("Wallbox2", makeRenderer((st, d) => VM.wallboxVM(st, d), wallboxBody));
 		reg.register(["EFM", "EnergyManager2"], makeRenderer((st) => VM.energyFlowVM(st), efmBody));
+		reg.register("WindowMonitor", makeRenderer((st) => VM.windowMonitorVM(st), windowBody));
+		reg.register("Gate", makeRenderer((st) => VM.gateVM(st), gateBody));
+		reg.register("PresenceDetector", makeRenderer((st) => VM.presenceVM(st), presenceBody));
+		reg.register("AalEmergency", makeRenderer((st) => VM.aalEmergencyVM(st), aalBody));
+		reg.register("Jalousie", makeRenderer((st) => VM.jalousieVM(st), jalousieBody));
+		reg.register("CentralJalousie", makeRenderer((st) => VM.centralJalousieVM(st), centralJalousieBody));
+		reg.register("LightControllerV2", makeRenderer((st) => VM.lightControllerVM(st), lightBody));
+		reg.register("PvProductionForecast", makeRenderer((st) => VM.pvForecastVM(st), pvForecastBody));
+		reg.register("SpotPriceOptimizer", makeRenderer((st, d) => VM.spotPriceVM(st, d), spotPriceBody));
+		reg.register("AlarmClock", makeRenderer((st) => VM.alarmClockVM(st), alarmBody));
+		reg.register("Heatmixer", makeRenderer((st, d) => VM.heatmixerVM(st, d), roomBody));
+		reg.register("SteakThermo", makeRenderer((st, d) => VM.steakThermoVM(st, d), roomBody));
+		reg.register("Ventilation", makeRenderer((st) => VM.ventilationVM(st), ventBody));
+		reg.register("Sauna", makeRenderer((st, d) => VM.saunaVM(st, d), saunaBody));
+		reg.register("Intercom", makeRenderer((st) => VM.intercomVM(st), intercomBody));
+		reg.register("StatusMonitor", makeRenderer((st) => VM.statusMonitorVM(st), statusMonBody));
 		return reg;
 	}
 
