@@ -1,10 +1,31 @@
-/*
- *
- * MMM-Loxone
- *
- * idoodler
- * MIT Licensed.
- *
- * Custom here your css module
- *
- */
+.mmm-loxone {
+	--lox-fg: #ffffff;
+	--lox-muted: #888888;
+	--lox-production: #7bd06a;
+	--lox-import: #ff6b6b;
+	--lox-export: #7bd06a;
+	--lox-storage: #5aa9ff;
+	--lox-consume: #9fe08a;
+	color: var(--lox-fg);
+	font-weight: 300;
+}
+.lox-grid { display: grid; gap: 18px; }
+.lox-grid.lox-layout-list { display: block; }
+.lox-tile { padding: 2px 0; }
+.lox-tile-head { display: flex; align-items: baseline; gap: 8px; }
+.lox-icon { font-size: 14px; }
+.lox-title { font-size: 13px; }
+.lox-room { font-size: 10px; text-transform: uppercase; color: var(--lox-muted); margin-left: auto; }
+.lox-tile-body { margin-top: 4px; }
+.lox-value { font-size: 20px; font-weight: 300; }
+.lox-sub { font-size: 11px; color: var(--lox-muted); }
+.lox-state.is-on { color: var(--lox-production); }
+.lox-bar { height: 3px; background: #1c1c1c; margin-top: 6px; }
+.lox-bar-fill { height: 3px; background: var(--lox-production); }
+.lox-badge { font-size: 10px; text-transform: uppercase; color: var(--lox-muted); margin-left: 8px; }
+.lox-badge.is-charging { color: var(--lox-production); }
+.lox-room-temp .lox-target { font-size: 12px; color: var(--lox-muted); margin-left: 6px; }
+.lox-wb-head { display: flex; align-items: baseline; justify-content: space-between; }
+.lox-efm text { font-family: inherit; }
+.lox-status, .lox-warning { font-size: 11px; color: var(--lox-muted); margin: 4px 0; }
+.lox-warning { color: var(--lox-import); }
