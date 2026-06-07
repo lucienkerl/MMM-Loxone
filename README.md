@@ -94,6 +94,7 @@ Add the module to the `modules` array in `config/config.js`:
 | `rooms` | No | `[]` | Room names or UUIDs — all controls in these rooms are shown |
 | `categories` | No | `[]` | Category names or UUIDs — all controls in these categories are shown |
 | `hideEfmChildren` | No | `true` | Hide the meters an Energy-Flow Monitor is built from so it shows only its first-level flow (no duplicate sub-sensor tiles). Set `false` to show them. Controls you list explicitly in `controls` are always kept |
+| `efmSocControl` | No | auto | Name/UUID of the control whose value is the battery state-of-charge shown on the EFM's storage node. Defaults to auto-detecting a single `EnergyManager2` |
 | `layout` | No | `"grid"` | `"grid"` or `"list"` |
 | `columns` | No | `2` | Number of grid columns |
 | `showRoomLabels` | No | `true` | Show room name label in each tile header |
@@ -140,7 +141,7 @@ If a name is ambiguous (the same name in several rooms) or not found, the module
 
 | Loxone type | Display |
 |---|---|
-| `EFM`, `EnergyManager2` | Energy-flow radial SVG (production, grid, storage, consumption). The EFM shows only its first-level balance; the meters it is built from are hidden by default — see `hideEfmChildren` |
+| `EFM`, `EnergyManager2` | Energy-flow radial SVG (production, grid, storage + battery SoC, consumption). The EFM shows only its first-level balance; the meters it is built from are hidden by default — see `hideEfmChildren`. Battery SoC is pulled from an `EnergyManager2` (or `efmSocControl`) |
 | `Wallbox2` | Charging power, progress bar, session energy, status badge |
 | `Meter` | Power, cumulative energy, optional storage bar |
 | `IRoomControllerV2` | Current and target temperature |

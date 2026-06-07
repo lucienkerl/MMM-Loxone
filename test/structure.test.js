@@ -122,3 +122,33 @@ test("referencedControlUuids is empty for a plain control without nodes/subContr
 	assert.equal(s.referencedControlUuids(U("22222222")).size, 0);
 	assert.equal(s.referencedControlUuids(U("99999999")).size, 0);
 });
+
+test("controlsByType returns top-level controls of a given type", () => {
+	const EFM = U("0efm0000");
+	const EM = U("0e9d0000");
+	const s = new Structure({
+		rooms: {}, cats: {},
+		controls: {
+			[EFM]: { uuidAction: EFM, name: "EFM", type: "EFM", states: {} },
+			[EM]: { uuidAction: EM, name: "EM", type: "EnergyManager2", states: {} }
+		},
+		globalStates: {}
+	});
+	assert.deepEqual(s.controlsByType("EnergyManager2").map((c) => c.name), ["EM"]);
+	assert.equal(s.controlsByType("Nope").length, 0);
+});
+
+test("linkState adds a named state and indexes it for reverse lookup", () => {
+	const EFM = U("0efm0000");
+	const SOC = U("0e50c000");
+	const s = new Structure({
+		rooms: {}, cats: {},
+		controls: { [EFM]: { uuidAction: EFM, name: "EFM", type: "EFM", states: { Spwr: U("0e000003") } } },
+		globalStates: {}
+	});
+	assert.equal(s.linkState(EFM, "Ssoc", SOC), true);
+	assert.deepEqual(s.statesForUuid(SOC), [{ controlUuid: EFM, stateName: "Ssoc" }]);
+	assert.equal(s.namedStates(EFM, new Map([[SOC, 90]])).Ssoc, 90);
+	// does not overwrite a state the control already has
+	assert.equal(s.linkState(EFM, "Spwr", U("0e0000ff")), false);
+});

@@ -187,6 +187,52 @@ test("hideEfmChildren:false keeps the referenced meters as separate tiles", () =
 	assert.deepEqual(displayNames({ categories: ["Energie"], hideEfmChildren: false }), ["Energieflussmonitor", "Netz", "PV", "Wallbox"]);
 });
 
+function efmClient(structure, opt) {
+	const c = new LoxoneClient(Object.assign({ host: "h", user: "u", password: "p", clientUuid: "x", clientInfo: "i" }, opt));
+	c.structure = structure;
+	c._resolveDisplay();
+	c._linkEfmSoc();
+	return c;
+}
+
+test("auto-links a lone EnergyManager2's SoC into a displayed EFM that lacks one", () => {
+	const CAT = U("00cc0001");
+	const EFM = U("0efm0000");
+	const NETZ = U("0e1d0001");
+	const EM = U("0e9d0000");
+	const SOC = U("0e50c000");
+	const structure = new Structure({
+		rooms: {}, cats: { [CAT]: { uuid: CAT, name: "Energie" } },
+		controls: {
+			[EFM]: { uuidAction: EFM, name: "Energieflussmonitor", type: "EFM", cat: CAT,
+				states: { Ppwr: U("0e000001"), Gpwr: U("0e000002"), Spwr: U("0e000003") },
+				details: { nodes: [{ ctrlUuid: NETZ, nodeType: "Grid" }] } },
+			[NETZ]: { uuidAction: NETZ, name: "Netz", type: "Meter", cat: CAT, states: {} },
+			[EM]: { uuidAction: EM, name: "Energiemanager", type: "EnergyManager2", cat: CAT, states: { Ssoc: SOC } }
+		},
+		globalStates: {}
+	});
+	efmClient(structure, { controls: ["Energieflussmonitor"] });
+	assert.deepEqual(structure.statesForUuid(SOC).map((o) => o.controlUuid).sort(), [EFM, EM].sort());
+	assert.equal(structure.namedStates(EFM, new Map([[SOC, 87]])).Ssoc, 87);
+});
+
+test("efmSocControl overrides the SoC source (e.g. an InfoOnlyAnalog value)", () => {
+	const EFM = U("0efm0000");
+	const BAT = U("0eba0000");
+	const VAL = U("0eval000");
+	const structure = new Structure({
+		rooms: {}, cats: {},
+		controls: {
+			[EFM]: { uuidAction: EFM, name: "Energieflussmonitor", type: "EFM", states: { Spwr: U("0e000003") }, details: { nodes: [] } },
+			[BAT]: { uuidAction: BAT, name: "Batterie SoC", type: "InfoOnlyAnalog", states: { value: VAL } }
+		},
+		globalStates: {}
+	});
+	efmClient(structure, { controls: ["Energieflussmonitor"], efmSocControl: "Batterie SoC" });
+	assert.equal(structure.namedStates(EFM, new Map([[VAL, 55]])).Ssoc, 55);
+});
+
 test("stop() cancels a pending reconnect so a stopped client stays stopped", async () => {
 	const client = new LoxoneClient({
 		host: "ms.local", user: "m", password: "p", clientUuid: "u", clientInfo: "i",
