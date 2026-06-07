@@ -94,6 +94,9 @@ test("handshakes, loads structure, and emits controlState for a value event", as
 	await structureP;
 
 	assert.ok(fake.sent.some((c) => c.includes("keyexchange")), "sent keyexchange");
+	const kxCmd = fake.sent.find((c) => c.includes("keyexchange/"));
+	const kxPayload = kxCmd.slice(kxCmd.indexOf("keyexchange/") + "keyexchange/".length);
+	assert.match(kxPayload, /^[A-Za-z0-9+/]+={0,2}$/, "keyexchange session key must be raw base64, not URL-encoded");
 	assert.ok(fake.sent.some((c) => c.includes("getkey2")), "sent getkey2");
 	assert.ok(fake.sent.some((c) => c.includes("jdev/sys/enc/")), "sent ENCRYPTED getjwt");
 	assert.ok(fake.sent.some((c) => c.includes("data/LoxAPP3.json")), "downloaded structure");
