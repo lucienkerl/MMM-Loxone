@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>MMM-Loxone — Energy + Wallbox close-up</title>
+<link rel="stylesheet" href="../../MMM-Loxone.css">
+<style>
+	body { background: #000; margin: 0; padding: 28px; font-family: "Roboto Condensed", "Segoe UI", Roboto, sans-serif; }
+	.board { width: 520px; }
+	.lox-grid { gap: 22px 28px; }
+</style>
+</head>
+<body>
+<!-- Close-up of the Energy-Flow Monitor + Wallbox. Shoot at window 600x250, scale 2 -> docs/screenshots/energy-wallbox.png -->
+<div class="mmm-loxone board" id="board"></div>
+<script src="../../renderers/viewmodels.js"></script>
+<script src="../../renderers/render.js"></script>
+<script>
+	var dict = { WB_CHARGING: "Lädt", WB_CONNECTED: "Verbunden", WB_IDLE: "Frei", SOC: "SoC" };
+	var ctx = { translate: function (k) { return dict[k] || k; }, showRoom: true };
+	var demo = [
+		{ meta: { id: "efm", type: "EFM", name: "Energieflussmonitor", room: "Technik", details: { actualFormat: "%.1f kW" } },
+		  states: { Ppwr: 6.2, Gpwr: -1.1, Spwr: -2.0, Ssoc: 78 } },
+		{ meta: { id: "wb", type: "Wallbox2", name: "Wallbox", room: "Garage", details: { actualFormat: "%.1f kW", totalFormat: "%.1f kWh", max: 11 } },
+		  states: { actual: 7.7, total: 1234.5, connected: 1, enabled: 1, active: 1, limit: 11, session: "{\"power\":7.7,\"energy\":18.4}" } }
+	];
+	var reg = self.LoxRender.buildRegistry();
+	var grid = document.createElement("div");
+	grid.className = "lox-grid lox-layout-grid";
+	grid.style.gridTemplateColumns = "repeat(2, auto)";
+	demo.forEach(function (d) { grid.appendChild((reg.resolve(d.meta.type) || self.LoxRender.genericFallbackRenderer()).render(d.meta, d.states, ctx)); });
+	document.getElementById("board").appendChild(grid);
+</script>
+</body>
+</html>
