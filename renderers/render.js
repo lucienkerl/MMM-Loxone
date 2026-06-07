@@ -130,6 +130,11 @@
 
 	const analogBody = (vm) => el("div", "lox-value", vm.value);
 	const textBody = (vm) => el("div", "lox-value", vm.text);
+	const textStateBody = (vm) => {
+		const e = el("div", "lox-value", vm.text);
+		if (vm.color) { e.style.color = vm.color; }
+		return e;
+	};
 	const digitalBody = (vm) => {
 		const e = el("div", "lox-value lox-state", vm.text);
 		if (vm.color) { e.style.color = vm.color; }
@@ -178,7 +183,7 @@
 		reg.register("InfoOnlyAnalog", makeRenderer((st, d) => VM.infoAnalogVM(st, d), analogBody));
 		reg.register("InfoOnlyText", makeRenderer((st) => VM.infoTextVM(st), textBody));
 		reg.register("InfoOnlyDigital", makeRenderer((st, d) => VM.infoDigitalVM(st, d), digitalBody));
-		reg.register("TextState", makeRenderer((st) => VM.textStateVM(st), textBody));
+		reg.register("TextState", makeRenderer((st) => VM.textStateVM(st), textStateBody));
 		reg.register(["Switch", "Pushbutton"], makeRenderer((st) => VM.switchVM(st), switchBody));
 		reg.register("Slider", makeRenderer((st, d) => VM.sliderVM(st, d), sliderBody));
 		reg.register("Meter", makeRenderer((st, d) => VM.meterVM(st, d), meterBody));

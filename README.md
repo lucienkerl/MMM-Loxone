@@ -95,7 +95,7 @@ Add the module to the `modules` array in `config/config.js`:
 | `InfoOnlyAnalog` | Formatted numeric value |
 | `InfoOnlyDigital` | On/off text with configurable color |
 | `InfoOnlyText` | Raw text |
-| `TextState` | Text with optional icon and color |
+| `TextState` | Text with state color |
 | `Switch`, `Pushbutton` | On/Off state |
 | `Slider` | Value with progress bar |
 | *(unknown)* | First available state value as text |

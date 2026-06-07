@@ -44,8 +44,8 @@ Self-contained library with no MagicMirror dependency. Submodules:
 - **`crypto/`** — AES-256-CBC + RSA key exchange (Node `crypto`)
 - **`protocol/`** — binary WebSocket frame parser (header type, value-event, text-event, keepalive)
 - **`auth/`** — HMAC-SHA1/SHA256 token acquisition + refresh + `TokenStore` (JSON file)
-- **`structure/`** — `LoxoneStructure` parses `LoxAPP3.json`; resolves controls by name/UUID, room names, category names, `namedStates()`
-- **`transport/`** — `LoxoneTransport` WebSocket wrapper with reconnect and back-off
+- **`structure/`** — `Structure` parses `LoxAPP3.json`; resolves controls by name/UUID, room names, category names, `namedStates()`
+- **`transport/`** — `WebSocketTransport` WebSocket wrapper with reconnect and back-off
 - **`IconCache.js`** — fetches + caches control SVG icons over HTTP
 - **`LoxoneClient.js`** — public entry point; EventEmitter emitting `status`, `oos`, `warnings`, `controlState`, `structure`, `error`
 
@@ -82,18 +82,13 @@ Both files are IIFEs that export to `module.exports` under Node (for unit tests)
 
 Tests live in `test/`. Run with `npm test` (requires Node 20+).
 
-Current suite (79 tests total across Plans 1 + 2):
-- `test/crypto.test.js` — AES/RSA crypto helpers
-- `test/protocol.test.js` — binary frame parser
-- `test/encryptedCommand.test.js` — command encryption
-- `test/auth.test.js` — token auth + store
-- `test/structure.test.js` — structure file parsing + name resolution
-- `test/netHelpers.test.js` — host/proxy/timeout helpers
-- `test/client.test.js` — `LoxoneClient` integration
-- `test/viewmodels.test.js` — all view-model pure functions
-- `test/render.test.js` — registry completeness
-- `test/coalescer.test.js` — state-update coalescer
-- `test/bridge-helpers.test.js` — `toControlMeta` + `getOrCreateClientId`
+Current suite (79 tests total across Plans 1 + 2), one `test/<name>.test.js` per unit:
+
+- **Protocol library:** `crypto`, `uuid`, `messageHeader`, `frameAssembler`, `eventParser`, `commands`,
+  `response`, `tokenStore`, `authenticator`, `structure`, `publicKey`, `apiKey`, `http`, `backoff`,
+  `requester`, `webSocketTransport`, `iconCache`, `loxoneClient`, `index`
+- **MagicMirror layer:** `viewmodels` (view-model pure functions), `render` (registry completeness),
+  `coalescer` (state-update batching), `bridge-helpers` (`toControlMeta` + `getOrCreateClientId`)
 
 DOM builders, `MMM-Loxone.js`, and CSS are validated visually by running the mirror (no jsdom dependency).
 
