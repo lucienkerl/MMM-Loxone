@@ -29,3 +29,18 @@ test("rejects on invalid JSON", async () => {
 		server.close();
 	}
 });
+
+test("rejects with a timeout error when the server never responds", async () => {
+	const server = http.createServer(() => { /* accept but never respond */ });
+	await new Promise((r) => server.listen(0, r));
+	const { port } = server.address();
+	try {
+		await assert.rejects(
+			() => httpGetJson(`http://127.0.0.1:${port}/hang`, { timeoutMs: 120 }),
+			/timed out/i
+		);
+	} finally {
+		server.closeAllConnections();
+		server.close();
+	}
+});

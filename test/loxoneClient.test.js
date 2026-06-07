@@ -130,3 +130,34 @@ test("emits a warning for an unresolved configured control", async () => {
 	assert.equal(warnings[0].reason, "NotFoundError");
 	client.stop();
 });
+
+test("coalesces multiple reconnect triggers into a single attempt", async () => {
+	const client = new LoxoneClient({
+		host: "ms.local", user: "m", password: "p", clientUuid: "u", clientInfo: "i",
+		controls: [], reconnectMaxBackoffMs: 10,
+		deps: { createTransport: () => new FakeTransport(), httpGetJson: async () => ({}), now: () => 1700000000000 }
+	});
+	let connectCount = 0;
+	client.connect = () => { connectCount += 1; return Promise.resolve(client); };
+	// Both the open() catch path and the close path can fire for one failure.
+	client._scheduleReconnect();
+	client._scheduleReconnect();
+	client._scheduleReconnect();
+	await new Promise((r) => setTimeout(r, 60));
+	assert.equal(connectCount, 1, "three triggers must schedule exactly one reconnect");
+	client.stop();
+});
+
+test("stop() cancels a pending reconnect so a stopped client stays stopped", async () => {
+	const client = new LoxoneClient({
+		host: "ms.local", user: "m", password: "p", clientUuid: "u", clientInfo: "i",
+		controls: [], reconnectMaxBackoffMs: 10,
+		deps: { createTransport: () => new FakeTransport(), httpGetJson: async () => ({}), now: () => 1700000000000 }
+	});
+	let connectCount = 0;
+	client.connect = () => { connectCount += 1; return Promise.resolve(client); };
+	client._scheduleReconnect();
+	client.stop();
+	await new Promise((r) => setTimeout(r, 60));
+	assert.equal(connectCount, 0, "stop() must cancel the pending reconnect");
+});
