@@ -20,4 +20,6 @@ test("resolve returns a renderer with render/update/toVM; unknown -> null", () =
 	assert.equal(typeof r.update, "function");
 	assert.equal(typeof r.toVM, "function");
 	assert.equal(reg.resolve("FooBarUnknown"), null);
+	// the audio renderer additionally exposes tick() for smooth position updates
+	assert.equal(typeof reg.resolve("AudioZoneV2").tick, "function");
 });

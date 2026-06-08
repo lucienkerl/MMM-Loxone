@@ -32,6 +32,7 @@ Module.register("MMM-Loxone", {
 		this.registry = self.LoxRender.buildRegistry();
 		this.fallback = self.LoxRender.genericFallbackRenderer();
 		this.tiles = {};
+		this.audioTicker = null;
 		this.controls = [];
 		this.status = { state: "connecting" };
 		this.warnings = [];
@@ -69,6 +70,31 @@ Module.register("MMM-Loxone", {
 		});
 	},
 
+	// Tick once a second so the audio play-position runs smoothly between the
+	// Audioserver's ~5s pushes. Only runs while an audio tile is on screen.
+	startAudioTicker() {
+		this.stopAudioTicker();
+		const hasAudio = Object.keys(this.tiles).some((id) => this.tiles[id].meta.type === "AudioZoneV2");
+		if (!hasAudio) {
+			return;
+		}
+		this.audioTicker = setInterval(() => {
+			Object.keys(this.tiles).forEach((id) => {
+				const t = this.tiles[id];
+				if (t && t.renderer && typeof t.renderer.tick === "function") {
+					t.renderer.tick(t.el);
+				}
+			});
+		}, 1000);
+	},
+
+	stopAudioTicker() {
+		if (this.audioTicker) {
+			clearInterval(this.audioTicker);
+			this.audioTicker = null;
+		}
+	},
+
 	rendererFor(type) {
 		return this.registry.resolve(type) || this.fallback;
 	},
@@ -87,6 +113,7 @@ Module.register("MMM-Loxone", {
 			empty.className = "lox-status";
 			empty.textContent = this.status.state === "error" ? (this.status.message || this.translate("ERROR")) : this.translate("LOADING");
 			wrapper.appendChild(empty);
+			this.stopAudioTicker();
 			return wrapper;
 		}
 		const grid = document.createElement("div");
@@ -107,6 +134,7 @@ Module.register("MMM-Loxone", {
 			wEl.textContent = this.translate(w.reason === "AmbiguousNameError" ? "AMBIGUOUS" : "NOT_FOUND") + ": " + w.entry;
 			wrapper.appendChild(wEl);
 		});
+		this.startAudioTicker();
 		return wrapper;
 	}
 });

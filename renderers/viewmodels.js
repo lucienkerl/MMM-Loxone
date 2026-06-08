@@ -323,6 +323,8 @@
 			title: states.npTitle || "",
 			subline: subParts.length ? subParts.join(" · ") : (states.npStation || ""),
 			cover: states.npCover || null,
+			time,
+			duration,
 			hasProgress: duration > 0,
 			progressPct: duration > 0 ? Math.max(0, Math.min(100, Math.round((time / duration) * 100))) : 0,
 			timeText: duration > 0 ? mmss(time) + " / " + mmss(duration) : ""

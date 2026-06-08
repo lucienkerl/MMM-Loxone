@@ -208,6 +208,8 @@ test("audioVM surfaces now-playing track + progress", () => {
 	assert.equal(r.hasProgress, true);
 	assert.equal(r.progressPct, 25);
 	assert.equal(r.timeText, "1:00 / 4:00");
+	assert.equal(r.time, 60);
+	assert.equal(r.duration, 240);
 	assert.equal(r.playing, true);
 });
 

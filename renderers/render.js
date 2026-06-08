@@ -334,7 +334,12 @@
 		w.appendChild(meta);
 		return { root: w, refs: { img, title, sub, fill: barEl.firstChild, meta } };
 	}
-	function applyAudio(refs, vm, ctx) {
+	function audioMmss(sec) {
+		const s = Math.max(0, Math.floor(sec || 0));
+		const r = s % 60;
+		return Math.floor(s / 60) + ":" + (r < 10 ? "0" + r : r);
+	}
+	function applyAudioStatic(refs, vm, ctx) {
 		const statusWord = tr(ctx, "AUDIO_" + vm.status.toUpperCase(), vm.status);
 		if (vm.cover) {
 			if (refs.img.getAttribute("src") !== vm.cover) { refs.img.setAttribute("src", vm.cover); }
@@ -349,8 +354,24 @@
 		const sub = vm.subline || (vm.title ? statusWord : "");
 		refs.sub.textContent = sub;
 		refs.sub.classList.toggle("is-hidden", !sub);
-		refs.fill.style.width = (vm.hasProgress ? vm.progressPct : vm.volumePct) + "%";
-		refs.meta.textContent = (vm.hasProgress ? vm.timeText + " · " : "") + tr(ctx, "VOLUME", "Vol") + " " + vm.volume;
+	}
+	function drawAudioProgress(refs, c) {
+		const pct = c.duration > 0 ? Math.max(0, Math.min(100, Math.round((c.time / c.duration) * 100))) : 0;
+		refs.fill.style.width = pct + "%";
+		refs.meta.textContent = audioMmss(c.time) + " / " + audioMmss(c.duration) + " · " + c.volLabel;
+	}
+	// Store an interpolation clock on the tile so tick() can advance the position
+	// between the Audioserver's ~5s pushes; volume tiles (radio/no duration) don't tick.
+	function applyAudioMeter(tile, vm, ctx) {
+		const volLabel = tr(ctx, "VOLUME", "Vol") + " " + vm.volume;
+		if (vm.hasProgress) {
+			tile._audioClock = { playing: vm.playing, hasProgress: true, time: vm.time, duration: vm.duration, volLabel };
+			drawAudioProgress(tile._audio, tile._audioClock);
+		} else {
+			tile._audioClock = { playing: vm.playing, hasProgress: false };
+			tile._audio.fill.style.width = vm.volumePct + "%";
+			tile._audio.meta.textContent = volLabel;
+		}
 	}
 	const audioRenderer = {
 		toVM: (st) => VM.audioVM(st),
@@ -358,12 +379,28 @@
 			const tile = makeTile(meta, ctx);
 			const built = buildAudio();
 			tile._audio = built.refs;
-			applyAudio(built.refs, this.toVM(states), ctx);
+			const vm = this.toVM(states);
+			applyAudioStatic(built.refs, vm, ctx);
+			applyAudioMeter(tile, vm, ctx);
 			tile._body.replaceChildren(built.root);
 			return tile;
 		},
 		update(tile, meta, states, ctx) {
-			if (tile._audio) { applyAudio(tile._audio, this.toVM(states), ctx); }
+			if (!tile._audio) {
+				return;
+			}
+			const vm = this.toVM(states);
+			applyAudioStatic(tile._audio, vm, ctx);
+			applyAudioMeter(tile, vm, ctx);
+		},
+		// Called ~1×/s by the frontend so the position ticks smoothly; it snaps back
+		// to the authoritative value on the next server update.
+		tick(tile) {
+			const c = tile._audioClock;
+			if (c && c.playing && c.hasProgress && c.time < c.duration) {
+				c.time = Math.min(c.duration, c.time + 1);
+				drawAudioProgress(tile._audio, c);
+			}
 		}
 	};
 
