@@ -364,14 +364,22 @@
 	// between the Audioserver's ~5s pushes; volume tiles (radio/no duration) don't tick.
 	function applyAudioMeter(tile, vm, ctx) {
 		const volLabel = tr(ctx, "VOLUME", "Vol") + " " + vm.volume;
-		if (vm.hasProgress) {
-			tile._audioClock = { playing: vm.playing, hasProgress: true, time: vm.time, duration: vm.duration, volLabel };
-			drawAudioProgress(tile._audio, tile._audioClock);
-		} else {
-			tile._audioClock = { playing: vm.playing, hasProgress: false };
+		if (!vm.hasProgress) {
+			tile._audioClock = { playing: vm.playing, hasProgress: false, title: vm.title };
 			tile._audio.fill.style.width = vm.volumePct + "%";
 			tile._audio.meta.textContent = volLabel;
+			return;
 		}
+		const prev = tile._audioClock;
+		let time = vm.time;
+		// On pause/stop the Audioserver reports a coarse/stale position; don't let it
+		// pull the (correctly interpolated) display backwards — hold it instead. While
+		// playing we still resync to the server value; a track change resyncs via title.
+		if (prev && prev.hasProgress && prev.title === vm.title && !vm.playing && vm.time < prev.time) {
+			time = prev.time;
+		}
+		tile._audioClock = { playing: vm.playing, hasProgress: true, time, duration: vm.duration, title: vm.title, volLabel };
+		drawAudioProgress(tile._audio, tile._audioClock);
 	}
 	const audioRenderer = {
 		toVM: (st) => VM.audioVM(st),
