@@ -220,7 +220,9 @@ test("audioVM radio: station as subline, no progress", () => {
 	assert.equal(r.timeText, "");
 });
 
-test("audioVM npMode overrides playState for status", () => {
+test("audioVM is not-playing if either the player mode OR the Miniserver playState says pause/stop", () => {
+	assert.equal(vm.audioVM({ playState: 2, serverState: 2, npMode: "pause" }).playing, false); // audioserver pauses first
 	assert.equal(vm.audioVM({ playState: 2, serverState: 2, npMode: "pause" }).status, "paused");
-	assert.equal(vm.audioVM({ playState: 0, serverState: 2, npMode: "play" }).status, "playing");
+	assert.equal(vm.audioVM({ playState: 1, serverState: 2, npMode: "play" }).playing, false);  // Miniserver pauses first (npMode stale)
+	assert.equal(vm.audioVM({ playState: 2, serverState: 2, npMode: "play" }).playing, true);   // both playing -> ticks
 });

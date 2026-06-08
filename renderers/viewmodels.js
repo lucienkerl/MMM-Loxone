@@ -301,22 +301,28 @@
 		const server = (states.serverState === null || states.serverState === undefined) ? null : num(states.serverState);
 		const online = server === null ? true : server >= 2;
 		const mode = states.npMode || "";
-		let status = "stopped";
+		const hasPlay = states.playState !== null && states.playState !== undefined;
+		// The position must tick only while actually playing — stop as soon as EITHER
+		// the player mode OR the Miniserver playState reports pause/stop (whichever
+		// lands first, and even if the Audioserver link is momentarily down).
+		const stopped = mode === "pause" || mode === "stop" || (hasPlay && (play === 0 || play === 1));
+		const playing = online && !stopped && (mode === "play" || (hasPlay && play >= 2));
+		let status;
 		if (!online) {
 			status = "offline";
-		} else if (mode) {
-			status = mode === "play" ? "playing" : (mode === "pause" ? "paused" : "stopped");
-		} else if (play >= 2) {
+		} else if (playing) {
 			status = "playing";
-		} else if (play === 1) {
+		} else if (mode === "pause" || play === 1) {
 			status = "paused";
+		} else {
+			status = "stopped";
 		}
 		const duration = num(states.npDuration);
 		const time = num(states.npTime);
 		const subParts = [states.npArtist, states.npAlbum].filter((x) => x);
 		return {
 			status,
-			playing: status === "playing",
+			playing,
 			offline: status === "offline",
 			volume: vol,
 			volumePct: maxVol > 0 ? Math.max(0, Math.min(100, Math.round((vol / maxVol) * 100))) : 0,
