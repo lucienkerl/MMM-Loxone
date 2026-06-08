@@ -53,7 +53,10 @@
 		{ meta: { id: "light", type: "LightControllerV2", name: "Licht Wohnen", room: "Wohnen" }, states: { activeMoods: "[3]", moodList: "[{\"id\":778,\"name\":\"Aus\"},{\"id\":3,\"name\":\"Gemütlich\"}]" } },
 		{ meta: { id: "spot", type: "SpotPriceOptimizer", name: "Strompreis", room: "Zentral", details: { format: "%.3f €/kWh" } }, states: { current: 0.124, low: 0.15, high: 0.35, veryHigh: 0.45 } },
 		{ meta: { id: "fc", type: "PvProductionForecast", name: "PV-Vorhersage", room: "Zentral" }, states: { today: 38.2, tomorrow: 41.7 } },
-		{ meta: { id: "audio", type: "AudioZoneV2", name: "Musik Bad", room: "Bad" }, states: { playState: 2, volume: 35, maxVolume: 80, serverState: 2, power: 1 } }
+		{ meta: { id: "audio", type: "AudioZoneV2", name: "Musik Bad", room: "Bad" },
+		  states: { playState: 2, volume: 28, maxVolume: 100, serverState: 2, power: 1,
+		    npTitle: "Powertrip", npArtist: "Monster Magnet", npAlbum: "Powertrip", npMode: "play", npDuration: 252, npTime: 64,
+		    npCover: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Crect width='80' height='80' fill='%233a5a8a'/%3E%3Ccircle cx='40' cy='40' r='22' fill='none' stroke='%23bcd0f0' stroke-width='3'/%3E%3Ccircle cx='40' cy='40' r='5' fill='%23bcd0f0'/%3E%3C/svg%3E" } }
 	];
 
 	var reg = self.LoxRender.buildRegistry();

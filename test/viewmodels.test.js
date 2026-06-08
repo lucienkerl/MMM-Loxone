@@ -197,3 +197,28 @@ test("audioVM volume bar scales to maxVolume", () => {
 	assert.equal(vm.audioVM({ playState: 2, volume: 30 }).volumePct, 30); // no maxVolume -> /100
 	assert.equal(vm.audioVM({ playState: 2, volume: 30 }).volume, 30);
 });
+
+test("audioVM surfaces now-playing track + progress", () => {
+	const r = vm.audioVM({ playState: 2, volume: 20, maxVolume: 100, serverState: 2,
+		npTitle: "Powertrip", npArtist: "Monster Magnet", npAlbum: "Powertrip",
+		npCover: "http://x/c.jpg", npDuration: 240, npTime: 60, npMode: "play" });
+	assert.equal(r.title, "Powertrip");
+	assert.equal(r.subline, "Monster Magnet · Powertrip");
+	assert.equal(r.cover, "http://x/c.jpg");
+	assert.equal(r.hasProgress, true);
+	assert.equal(r.progressPct, 25);
+	assert.equal(r.timeText, "1:00 / 4:00");
+	assert.equal(r.playing, true);
+});
+
+test("audioVM radio: station as subline, no progress", () => {
+	const r = vm.audioVM({ serverState: 2, npTitle: "Band - Song", npStation: "Best of Rock", npDuration: 0, npTime: 0, npMode: "play" });
+	assert.equal(r.subline, "Best of Rock");
+	assert.equal(r.hasProgress, false);
+	assert.equal(r.timeText, "");
+});
+
+test("audioVM npMode overrides playState for status", () => {
+	assert.equal(vm.audioVM({ playState: 2, serverState: 2, npMode: "pause" }).status, "paused");
+	assert.equal(vm.audioVM({ playState: 0, serverState: 2, npMode: "play" }).status, "playing");
+});

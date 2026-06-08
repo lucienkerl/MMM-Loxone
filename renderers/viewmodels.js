@@ -283,29 +283,49 @@
 		return { defective, alert: defective > 0 };
 	}
 
-	// AudioZoneV2 (Music Server zone). playState: -1 unknown, 0 stopped, 1 paused,
-	// 2 playing. serverState >= 2 means online. Track text is not on the control
-	// (it lives in the Audio Server protocol), so we show status + volume.
+	function mmss(sec) {
+		const s = Math.max(0, Math.floor(num(sec)));
+		const r = s % 60;
+		return Math.floor(s / 60) + ":" + (r < 10 ? "0" + r : r);
+	}
+
+	// AudioZoneV2 (Music Server zone). Status/volume come from the Miniserver
+	// (playState: -1 unknown/0 stopped/1 paused/2 playing; serverState >= 2 online).
+	// Track text/cover/position are injected from the Audioserver as np* fields
+	// (see node_helper / audioNowPlaying); for radio, station replaces artist/album
+	// and there is no duration/progress.
 	function audioVM(states) {
 		const play = num(states.playState);
 		const vol = num(states.volume);
 		const maxVol = (states.maxVolume === null || states.maxVolume === undefined) ? 100 : num(states.maxVolume);
 		const server = (states.serverState === null || states.serverState === undefined) ? null : num(states.serverState);
 		const online = server === null ? true : server >= 2;
+		const mode = states.npMode || "";
 		let status = "stopped";
 		if (!online) {
 			status = "offline";
+		} else if (mode) {
+			status = mode === "play" ? "playing" : (mode === "pause" ? "paused" : "stopped");
 		} else if (play >= 2) {
 			status = "playing";
 		} else if (play === 1) {
 			status = "paused";
 		}
+		const duration = num(states.npDuration);
+		const time = num(states.npTime);
+		const subParts = [states.npArtist, states.npAlbum].filter((x) => x);
 		return {
 			status,
 			playing: status === "playing",
 			offline: status === "offline",
 			volume: vol,
-			volumePct: maxVol > 0 ? Math.max(0, Math.min(100, Math.round((vol / maxVol) * 100))) : 0
+			volumePct: maxVol > 0 ? Math.max(0, Math.min(100, Math.round((vol / maxVol) * 100))) : 0,
+			title: states.npTitle || "",
+			subline: subParts.length ? subParts.join(" · ") : (states.npStation || ""),
+			cover: states.npCover || null,
+			hasProgress: duration > 0,
+			progressPct: duration > 0 ? Math.max(0, Math.min(100, Math.round((time / duration) * 100))) : 0,
+			timeText: duration > 0 ? mmss(time) + " / " + mmss(duration) : ""
 		};
 	}
 

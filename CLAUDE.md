@@ -47,6 +47,7 @@ Self-contained library with no MagicMirror dependency. Submodules:
 - **`structure/`** — `Structure` parses `LoxAPP3.json`; resolves controls by name/UUID, room names, category names, `namedStates()`, `referencedControlUuids()` (an EFM's node/sub-control subtree), `controlsByType()`, `linkState()` (attach another control's state, e.g. SoC, to a control)
 - **`transport/`** — `WebSocketTransport` WebSocket wrapper with reconnect and back-off; `open()` is time-bounded
 - **`IconCache.js`** — fetches + caches control SVG icons over HTTP
+- **`audio/`** — `AudioServerClient`: read-only second WebSocket to the Loxone **Audioserver** (`remotecontrol` subprotocol, port 7091) that receives `audio_event` pushes (cover/title/album/station/position/volume per player). Sends nothing privileged; reconnects with back-off
 - **`LoxoneClient.js`** — public entry point; EventEmitter emitting `status`, `oos`, `warnings`, `controlState`, `structure`, `error`. `_resolveDisplay()` builds the display set from `controls`/`rooms`/`categories`; with `hideEfmChildren` (default on) it drops the meters an EFM is built from so they don't duplicate as tiles (explicitly listed controls win). `_linkEfmSoc()` feeds a battery SoC (from a lone `EnergyManager2`, or `efmSocControl`) into each displayed EFM so its storage node shows the charge %
 
 Entry point: `lib/loxone/index.js` (exports `{ LoxoneClient }`).
@@ -56,6 +57,7 @@ Entry point: `lib/loxone/index.js` (exports `{ LoxoneClient }`).
 - **`Coalescer.js`** — batches rapid `controlState` events into a single array flush within a configurable window (default 250 ms)
 - **`controlMeta.js`** — `toControlMeta(control, structure)` maps a structure control to the wire meta object (`id/type/name/room/category/iconUuid/details`)
 - **`clientId.js`** — `getOrCreateClientId(filePath)` persists a stable UUID for the Loxone token client
+- **`audioNowPlaying.js`** — `toNowPlaying(entry, host)` maps an Audioserver `audio_event` entry to namespaced `np*` state fields (absolutizes the cover URL); merged into the AudioZoneV2 tile's state by `node_helper`
 
 ### `node_helper.js` — MagicMirror backend (Node only)
 
@@ -82,13 +84,13 @@ Both files are IIFEs that export to `module.exports` under Node (for unit tests)
 
 Tests live in `test/`. Run with `npm test` (requires Node 20+).
 
-Current suite (110 tests total across Plans 1 + 2), one `test/<name>.test.js` per unit:
+Current suite (118 tests total across Plans 1 + 2), one `test/<name>.test.js` per unit:
 
 - **Protocol library:** `crypto`, `uuid`, `messageHeader`, `frameAssembler`, `eventParser`, `commands`,
   `response`, `tokenStore`, `authenticator`, `structure`, `publicKey`, `apiKey`, `http`, `backoff`,
-  `requester`, `webSocketTransport`, `iconCache`, `loxoneClient`, `index`
+  `requester`, `webSocketTransport`, `iconCache`, `loxoneClient`, `index`, `audioServerClient`
 - **MagicMirror layer:** `viewmodels` (view-model pure functions), `render` (registry completeness),
-  `coalescer` (state-update batching), `bridge-helpers` (`toControlMeta` + `getOrCreateClientId`)
+  `coalescer` (state-update batching), `bridge-helpers` (`toControlMeta` + `getOrCreateClientId`), `audioNowPlaying`
 
 DOM builders, `MMM-Loxone.js`, and CSS are validated visually by running the mirror (no jsdom dependency).
 

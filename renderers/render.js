@@ -313,15 +313,58 @@
 	const intercomBody = (vm, ctx) => el("div", "lox-value" + (vm.ringing ? " lox-level-warn" : ""),
 		vm.ringing ? tr(ctx, "INTERCOM_RINGING", "Ringing") : (vm.lastTime ? tr(ctx, "INTERCOM_LAST", "last") + " " + vm.lastTime : "—"));
 	const statusMonBody = (vm, ctx) => lvl(vm.alert ? "alert" : "ok", vm.alert ? vm.defective + " " + tr(ctx, "STATUS_FAULT", "fault") : tr(ctx, "STATUS_OK", "OK"));
-	const audioBody = (vm, ctx) => {
+	// Audio tile is built once and patched in place so the cover image isn't
+	// reloaded (and the layout doesn't flicker) on every ~5s now-playing update.
+	function buildAudio() {
 		const w = el("div", "lox-audio");
-		const status = el("div", "lox-value lox-state", tr(ctx, "AUDIO_" + vm.status.toUpperCase(), vm.status));
-		status.classList.toggle("is-on", vm.playing);
-		if (vm.offline) { status.classList.add("lox-muted"); }
-		w.appendChild(status);
-		w.appendChild(bar(vm.volumePct));
-		w.appendChild(el("div", "lox-sub", tr(ctx, "VOLUME", "Vol") + " " + vm.volume));
-		return w;
+		const row = el("div", "lox-audio-row");
+		const img = el("img", "lox-cover");
+		img.alt = "";
+		const info = el("div", "lox-audio-info");
+		const title = el("div", "lox-value lox-audio-title");
+		const sub = el("div", "lox-sub lox-audio-sub");
+		info.appendChild(title);
+		info.appendChild(sub);
+		row.appendChild(img);
+		row.appendChild(info);
+		w.appendChild(row);
+		const barEl = bar(0);
+		w.appendChild(barEl);
+		const meta = el("div", "lox-sub lox-audio-meta");
+		w.appendChild(meta);
+		return { root: w, refs: { img, title, sub, fill: barEl.firstChild, meta } };
+	}
+	function applyAudio(refs, vm, ctx) {
+		const statusWord = tr(ctx, "AUDIO_" + vm.status.toUpperCase(), vm.status);
+		if (vm.cover) {
+			if (refs.img.getAttribute("src") !== vm.cover) { refs.img.setAttribute("src", vm.cover); }
+			refs.img.classList.remove("is-hidden");
+		} else {
+			refs.img.removeAttribute("src");
+			refs.img.classList.add("is-hidden");
+		}
+		refs.title.textContent = vm.title || statusWord;
+		refs.title.classList.toggle("is-on", vm.playing);
+		refs.title.classList.toggle("lox-muted", vm.offline);
+		const sub = vm.subline || (vm.title ? statusWord : "");
+		refs.sub.textContent = sub;
+		refs.sub.classList.toggle("is-hidden", !sub);
+		refs.fill.style.width = (vm.hasProgress ? vm.progressPct : vm.volumePct) + "%";
+		refs.meta.textContent = (vm.hasProgress ? vm.timeText + " · " : "") + tr(ctx, "VOLUME", "Vol") + " " + vm.volume;
+	}
+	const audioRenderer = {
+		toVM: (st) => VM.audioVM(st),
+		render(meta, states, ctx) {
+			const tile = makeTile(meta, ctx);
+			const built = buildAudio();
+			tile._audio = built.refs;
+			applyAudio(built.refs, this.toVM(states), ctx);
+			tile._body.replaceChildren(built.root);
+			return tile;
+		},
+		update(tile, meta, states, ctx) {
+			if (tile._audio) { applyAudio(tile._audio, this.toVM(states), ctx); }
+		}
 	};
 
 	function buildRegistry() {
@@ -352,7 +395,7 @@
 		reg.register("Sauna", makeRenderer((st, d) => VM.saunaVM(st, d), saunaBody));
 		reg.register("Intercom", makeRenderer((st) => VM.intercomVM(st), intercomBody));
 		reg.register("StatusMonitor", makeRenderer((st) => VM.statusMonitorVM(st), statusMonBody));
-		reg.register("AudioZoneV2", makeRenderer((st) => VM.audioVM(st), audioBody));
+		reg.register("AudioZoneV2", audioRenderer);
 		return reg;
 	}
 
