@@ -83,22 +83,28 @@ client.connect();
 
 async function probeAudioserver(hostport, token, zones) {
 	const url = "ws://" + hostport + "/";
-	log("=== connecting AUDIOSERVER WS:", url, "===");
-	const ws = new WebSocket(url);
+	// The Loxone WS protocol uses the "remotecontrol" subprotocol; without it the
+	// paired device accepts the TCP upgrade but ignores the connection.
+	log("=== connecting AUDIOSERVER WS:", url, "(subprotocol remotecontrol) ===");
+	const ws = new WebSocket(url, "remotecontrol");
 	const seen = [];
 	ws.on("message", (data, isBinary) => {
-		if (isBinary) { log("  <= [binary " + data.length + " bytes]"); return; }
+		if (isBinary) { log("  <= [binary " + data.length + " bytes]: " + data.slice(0, 16).toString("hex")); return; }
 		const txt = data.toString();
 		seen.push(txt);
 		log("  <=", txt.length > 500 ? txt.slice(0, 500) + "… (" + txt.length + " chars)" : txt);
 	});
 	ws.on("error", (e) => log("  ws error:", e && e.message));
+	ws.on("unexpected-response", (req, res) => log("  ws upgrade REJECTED: HTTP " + res.statusCode, JSON.stringify(res.headers)));
+	ws.on("close", (code, reason) => log("  ws CLOSE code=" + code, "reason=" + (reason ? reason.toString() : "")));
 	await new Promise((resolve, reject) => {
-		ws.once("open", resolve);
+		ws.once("open", () => resolve());
 		ws.once("error", reject);
 		setTimeout(() => reject(new Error("ws open timeout")), 8000);
 	});
-	log("  ws open");
+	log("  ws open — negotiated subprotocol:", JSON.stringify(ws.protocol));
+	log("  (waiting 2s for any identification / audio_event push on connect…)");
+	await sleep(2000);
 
 	const send = async (cmd, label) => {
 		log("  =>", label || cmd);
