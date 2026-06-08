@@ -43,7 +43,7 @@ function finish(code) {
 	done = true;
 	setTimeout(() => process.exit(code || 0), 200);
 }
-setTimeout(() => { log("TIMEOUT (30s)"); finish(1); }, 30000);
+setTimeout(() => { log("TIMEOUT (40s)"); finish(1); }, 40000);
 
 const tokenStore = new TokenStore(path.join(__dirname, "..", ".loxone-tokens.json"));
 const client = new LoxoneClient({
@@ -88,10 +88,12 @@ async function probeAudioserver(hostport, token, zones) {
 	log("=== connecting AUDIOSERVER WS:", url, "(subprotocol remotecontrol) ===");
 	const ws = new WebSocket(url, "remotecontrol");
 	const seen = [];
+	let events = 0;
 	ws.on("message", (data, isBinary) => {
 		if (isBinary) { log("  <= [binary " + data.length + " bytes]: " + data.slice(0, 16).toString("hex")); return; }
 		const txt = data.toString();
 		seen.push(txt);
+		if (txt.indexOf("\"audio_event\"") >= 0) { events += 1; }
 		log("  <=", txt.length > 500 ? txt.slice(0, 500) + "… (" + txt.length + " chars)" : txt);
 	});
 	ws.on("error", (e) => log("  ws error:", e && e.message));
@@ -102,30 +104,22 @@ async function probeAudioserver(hostport, token, zones) {
 		ws.once("error", reject);
 		setTimeout(() => reject(new Error("ws open timeout")), 8000);
 	});
-	log("  ws open — negotiated subprotocol:", JSON.stringify(ws.protocol));
-	log("  (waiting 2s for any identification / audio_event push on connect…)");
-	await sleep(2000);
-
-	const send = async (cmd, label) => {
-		log("  =>", label || cmd);
-		ws.send(cmd);
-		await sleep(900);
-	};
-
-	// --- discovery + handshake attempt (responses above guide the real sequence) ---
-	await send("audio/cfg/getkey", "audio/cfg/getkey");
-	await send("secure/hello/audio-probe/audio-probe/0", "secure/hello/…");
-	await send("secure/init/" + token, "secure/init/<token " + token.length + " chars>");
-	await send("secure/authenticate/" + token, "secure/authenticate/<token>");
-	await send("audio/cfg/getplayersdetails", "audio/cfg/getplayersdetails");
-	for (const z of zones.slice(0, 2)) {
-		await send("audio/" + z.playerid + "/status", "audio/" + z.playerid + "/status (" + z.name + ")");
-	}
-	await sleep(1500); // catch any pushed audio_event
+	log("  ws open — subprotocol:", JSON.stringify(ws.protocol), "| zones:", zones.length, "| token:", token.length + " chars");
+	// PASSIVE read-only test: only keepalive, NO privileged commands (getplayersdetails
+	// got us kicked with 1006). At +8s a harmless audio/cfg/getkey nudge — so we can tell
+	// from timestamps whether audio_event arrives purely passively or needs a nudge.
+	log("  PASSIVE test: keepalive only; harmless getkey nudge at +8s. Listening ~24s for audio_event…");
+	const ka = setInterval(() => { if (ws.readyState === WebSocket.OPEN) { ws.send("keepalive"); } }, 4000);
+	if (ka.unref) { ka.unref(); }
+	await sleep(8000);
+	if (ws.readyState === WebSocket.OPEN) { log("  => audio/cfg/getkey (nudge)"); ws.send("audio/cfg/getkey"); }
+	await sleep(16000);
+	clearInterval(ka);
 
 	const blob = seen.join("\n");
 	const hit = (k) => (blob.indexOf(k) >= 0 ? "YES" : "no");
-	log("=== now-playing fields seen ===");
-	log("  coverurl:", hit("coverurl"), "| title:", hit("title"), "| album:", hit("album"), "| artist:", hit("artist"), "| duration:", hit("duration"), "| time:", hit("\"time\""), "| audiopath:", hit("audiopath"));
+	log("=== result ===");
+	log("  audio_event pushes:", events, "| connection still open:", ws.readyState === WebSocket.OPEN);
+	log("  fields: coverurl:", hit("coverurl"), "title:", hit("title"), "album:", hit("album"), "artist:", hit("artist"), "duration:", hit("duration"), "time:", hit("\"time\""), "station:", hit("station"));
 	try { ws.close(); } catch (e) { /* ignore */ }
 }
